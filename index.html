@@ -314,6 +314,7 @@
 <div id="bar">
   <button id="bPhotos">Photos…</button>
   <button id="bNews" aria-pressed="false">News</button>
+  <button id="bCal" aria-pressed="false">Calendar</button>
   <button id="bLists" aria-pressed="false">Lists</button>
   <button id="bVoice" aria-pressed="false">Voice</button>
   <button id="bFull">Full screen</button>
@@ -436,6 +437,7 @@
       <li>“…play Khruangbin” (YouTube Music)</li>
       <li>“…put on some jams” (your radio page)</li>
       <li>“…show the news” / “hide the news”</li>
+      <li>“…hide the calendar” / “show the calendar”</li>
       <li>“…next” / “pause” / “resume” (photos)</li>
       <li>“…what's left on my calendar today?”</li>
       <li>“…stop” (silences an alarm or Claude)</li>
@@ -497,6 +499,7 @@
     newsTo:   store.get('newsTo', 10),
     newsMode: store.get('newsMode', 'auto'),
     listsHidden: store.get('listsHidden', false),
+    calHidden: store.get('calHidden', false),
     topic:    store.get('topic', ''),
     wake:     store.get('wake', 'hey claude'),
     voice:    store.get('voice', true),
@@ -915,7 +918,8 @@
   }
   function renderCalendar(){
     const card = $('#cal'), ul = $('#calList'); ul.textContent = '';
-    card.classList.toggle('show', !!cfg.ical);
+    card.classList.toggle('show', !!cfg.ical && !cfg.calHidden);
+    $('#bCal').setAttribute('aria-pressed', String(!!cfg.ical && !cfg.calHidden));
     if (!cfg.ical) return;
     if (calState === 'error'){ $('#calSub').textContent = 'Could not read your calendar. Check the address in Settings.'; return; }
     const now = new Date(), midnight = new Date(now); midnight.setHours(24, 0, 0, 0);
@@ -1195,6 +1199,8 @@
     if ((m = cmd.match(/^(?:clear|empty)\s+(?:my|the)\s+(?:(.+?)\s+)?list$/))){ listClear(m[1]); pill('List cleared', 2500); return true; }
     if (/^(show|open)( me)?( my| the)? lists?$/.test(cmd)){ setListsHidden(false); return true; }
     if (/^(hide|close)( my| the)? lists?$/.test(cmd)){ setListsHidden(true); return true; }
+    if (/^(show|open)( me)?( my| the)? calendar$/.test(cmd)){ pill('Showing calendar', 1500); setCalHidden(false); return true; }
+    if (/^(hide|close)( my| the)? calendar$/.test(cmd)){ pill('Hiding calendar', 1500); setCalHidden(true); return true; }
     // slideshow + news
     if (/^(next|skip)( photo| picture| one)?$/.test(cmd)){ pill('Next photo', 1500); step(1); return true; }
     if (/^(previous|back|go back|last)( photo| picture| one)?$/.test(cmd)){ pill('Previous photo', 1500); step(-1); return true; }
@@ -1205,6 +1211,8 @@
     if (/^(stop|dismiss|quiet|never ?mind|cancel)$/.test(cmd)){ if (ringing) stopRing(); stopSpeaking(); return true; }
     return false;
   }
+  // Hiding the calendar only hides the card; Claude can still answer questions about today's events.
+  function setCalHidden(h){ cfg.calHidden = h; store.set('calHidden', h); renderCalendar(); if (news.length) renderNews(); }
   function setListsHidden(h){ cfg.listsHidden = h; store.set('listsHidden', h); renderLists(); }
   function run(cmd){
     cmd = cmd.trim().replace(/^(?:please\s+|can you\s+|could you\s+)/, '');
@@ -1509,6 +1517,7 @@
     if (Math.abs(dx) > 60) step(dx < 0 ? 1 : -1);
   }, { passive: true });
   $('#bNews').addEventListener('click', () => setNews(newsWanted() ? 'off' : 'on'));
+  $('#bCal').addEventListener('click', () => { if (!cfg.ical) toast('No calendar connected yet. Add your Google Calendar\'s secret iCal address in Settings.', 7000); else setCalHidden(!cfg.calHidden); });
   $('#bLists').addEventListener('click', () => { if (!lists.length) toast('Your lists are empty. Say “' + cfg.wake + ', add milk to my shopping list”.', 6000); else setListsHidden(!cfg.listsHidden); });
   $('#bVoice').addEventListener('click', () => { if (wantVoice){ stopVoice(); store.set('voice', false); } else { startVoice(); store.set('voice', true); } });
 

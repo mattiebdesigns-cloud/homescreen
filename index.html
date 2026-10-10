@@ -352,7 +352,7 @@
   <div class="row"><label for="sCal">Secret iCal address<small>Google Calendar → Settings → your calendar → “Secret address in iCal format”. Read only through this site's own helper (fetch.php); it is never sent to public relay services. Reset the address in Google Calendar any time to cut access.</small></label><input id="sCal" type="url" placeholder="https://calendar.google.com/calendar/ical/…/basic.ics"></div>
 
   <h4>Claude</h4>
-  <div class="row"><label for="sKey">Anthropic API key<small>From platform.claude.com (the Claude Console). Stored only in this browser. Max plans can claim monthly API credits for this under Settings &gt; Billing on claude.ai.</small></label><input id="sKey" type="password" placeholder="sk-ant-…"></div>
+  <div class="row"><label for="sKey">Anthropic API key<small>From platform.claude.com (the Claude Console). Stored only in this browser. Max plans can claim monthly API credits for this under Settings &gt; Billing on claude.ai.</small></label><input id="sKey" type="password" placeholder="sk-ant-…" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
   <div class="row"><label for="sModel">Model</label><input id="sModel" type="text"></div>
   <div class="row"><label for="sSpeak">Read Claude's replies aloud</label><input id="sSpeak" type="checkbox"></div>
   <div class="row"><label for="sVoice">Speaking voice<small>Premium and Enhanced voices sound most natural. Add them on the Mac: System Settings → Accessibility → Spoken Content → System voice → Manage Voices, then reload this page. Pick one to hear it.</small></label><select id="sVoice"></select></div>
@@ -475,6 +475,12 @@
   const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
 
   /* ================= storage ================= */
+  // Copying a key on a phone can bring invisible characters along, or a keyboard can turn "-" into a long dash.
+  // A real key is plain letters, digits, "-" and "_", and a browser cannot send anything else in a header.
+  function cleanKey(s){
+    return String(s || '').replace(/[\u2010-\u2015\u2212\uFE58\uFE63\uFF0D]/g, '-').replace(/[\s\u00AD\u200B-\u200F\u2028-\u202F\u2060\uFEFF]/g, '');
+  }
+  const keyOk = k => /^[A-Za-z0-9_-]+$/.test(k);
   const store = {
     get(k, d){ try{ const v = localStorage.getItem('hd_' + k); return v === null ? d : JSON.parse(v); }catch(e){ return d; } },
     set(k, v){ try{ localStorage.setItem('hd_' + k, JSON.stringify(v)); }catch(e){} }
@@ -483,7 +489,7 @@
     interval: store.get('interval', 20),
     album:    store.get('album', ''),
     ical:     store.get('ical', ''),
-    key:      store.get('key', ''),
+    key:      cleanKey(store.get('key', '')),
     model:    (m => m === 'claude-sonnet-5-5' ? 'claude-sonnet-5' : m)(store.get('model', 'claude-sonnet-5')),
     speak:    store.get('speak', true),
     ttsVoice: store.get('ttsVoice', ''),
@@ -1334,6 +1340,8 @@
     return 'Unknown tool.';
   }
   async function askClaude(text){
+    const key = cleanKey(cfg.key);
+    if (!keyOk(key)){ bubble(text, 'The API key in Settings has a character that cannot be part of a key, often from copying it on a phone. Open Settings and paste the key again.'); return; }
     if (asking) asking.abort();
     const ctl = asking = new AbortController();
     stopSpeaking();
@@ -1348,7 +1356,7 @@
       for (let round = 0; round < 5; round++){
         const res = await fetch('https://api.anthropic.com/v1/messages', {
           method: 'POST', signal: ctl.signal,
-          headers: { 'content-type': 'application/json', 'x-api-key': cfg.key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+          headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
           // Low effort keeps spoken answers quick; max_tokens leaves room for the model's thinking as well as the reply.
           body: JSON.stringify({ model: cfg.model, max_tokens: 2000, output_config: { effort: 'low' }, system, tools: TOOLS, messages })
         });
@@ -1543,7 +1551,8 @@
     set('wake', $('#sWake').value.trim() || 'hey claude'); buildWake();
     set('unit', $('#sUnit').value);
     set('status', $('#sStatus').value.trim()); set('radio', $('#sRadio').value.trim()); loadStatus();
-    set('key', $('#sKey').value.trim()); set('model', $('#sModel').value.trim() || 'claude-sonnet-5'); set('speak', $('#sSpeak').checked); set('ttsVoice', $('#sVoice').value);
+    set('key', cleanKey($('#sKey').value));
+    if (cfg.key && !keyOk(cfg.key)) toast('That API key has a character that cannot be part of a key. Copy it again from the Claude Console and paste it here.', 12000); set('model', $('#sModel').value.trim() || 'claude-sonnet-5'); set('speak', $('#sSpeak').checked); set('ttsVoice', $('#sVoice').value);
     const topic = $('#sTopic').value.trim();
     if (topic !== cfg.topic){ set('topic', topic); newsAt = 0; news = []; }
     if (cfg.newsMode !== 'auto') set('newsMode', 'auto');

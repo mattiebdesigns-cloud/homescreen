@@ -263,7 +263,7 @@
     <h1>Home Display</h1>
     <p>Paste the share link of a Google Photos album. New photos you add to that album show up here on their own.</p>
     <form id="albumRow" autocomplete="off">
-      <input id="wAlbum" type="url" placeholder="https://photos.app.goo.gl/…">
+      <input id="wAlbum" type="url" placeholder="https://photos.google.com/share/…">
       <button class="primary" type="submit">Connect album</button>
     </form>
     <form id="cityRow" autocomplete="off" style="display:flex;gap:10px;margin-top:12px">
@@ -271,7 +271,7 @@
       <button class="btn" type="submit">Set city</button>
     </form>
     <button class="linkbtn" id="bFolder">Use a folder on this Mac instead</button>
-    <div class="note">In Google Photos: open the album → Share → Create link → Copy link.<br>Calendar, Claude and the rest are in Settings (move the mouse, top right).<br><button class="linkbtn" id="bGuide" style="margin-top:6px">Open the setup guide</button></div>
+    <div class="note">In Google Photos: open the album → Share → Create link → Copy link, open that link in a new tab, then copy the full address it lands on (https://photos.google.com/share/…).<br>Calendar, Claude and the rest are in Settings (move the mouse, top right).<br><button class="linkbtn" id="bGuide" style="margin-top:6px">Open the setup guide</button></div>
   </div>
 </div>
 
@@ -281,7 +281,7 @@
   <h3>Settings</h3>
 
   <h4>Photos</h4>
-  <div class="row"><label for="sAlbum">Google Photos album link<small>The album's share link. Anyone with the link can view that album.</small></label><input id="sAlbum" type="url" placeholder="https://photos.app.goo.gl/…"></div>
+  <div class="row"><label for="sAlbum">Google Photos album link<small>The album's share link. Anyone with the link can view that album.</small></label><input id="sAlbum" type="url" placeholder="https://photos.google.com/share/…"></div>
   <div class="row"><label for="sInterval">Seconds per photo</label><input class="sm" id="sInterval" type="number" min="5" max="600"></div>
 
   <h4>Calendar</h4>
@@ -291,6 +291,7 @@
   <div class="row"><label for="sKey">Anthropic API key<small>From platform.claude.com (the Claude Console). Stored only in this browser. Max plans can claim monthly API credits for this under Settings &gt; Billing on claude.ai.</small></label><input id="sKey" type="password" placeholder="sk-ant-…"></div>
   <div class="row"><label for="sModel">Model</label><input id="sModel" type="text"></div>
   <div class="row"><label for="sSpeak">Read Claude's replies aloud</label><input id="sSpeak" type="checkbox"></div>
+  <div class="row"><label for="sVoice">Speaking voice<small>Premium and Enhanced voices sound most natural. Add them on the Mac: System Settings → Accessibility → Spoken Content → System voice → Manage Voices, then reload this page. Pick one to hear it.</small></label><select id="sVoice"></select></div>
   <div class="row"><label for="sWake">Wake word<small>Say it before a command or question</small></label><input id="sWake" type="text"></div>
 
   <div class="row"><label for="sStatus">Project status file<small>A text file on this site that Claude reads for context, e.g. /DEVSTATUS.txt. Blank to turn off.</small></label><input id="sStatus" type="text"></div>
@@ -317,7 +318,8 @@
     <ol>
       <li>Open <a href="https://photos.google.com/albums" target="_blank" rel="noopener">Google Photos</a> and open an album (or create one for this display).</li>
       <li>Choose <b>Share</b>, then <b>Create link</b>, then <b>Copy link</b>.</li>
-      <li>Paste the link on the welcome screen and press <b>Connect album</b>.</li>
+      <li>Open that link in a new tab. When the album appears, copy the full address from the address bar. It starts with <code>https://photos.google.com/share/</code> and ends with <code>?key=…</code>.</li>
+      <li>Paste that address on the welcome screen and press <b>Connect album</b>. (The short <code>photos.app.goo.gl</code> link does not work here.)</li>
     </ol>
     <p>Photos you add to that album later appear here on their own. Anyone who has the link can view that album, so use an album you are comfortable sharing. No Google Photos? Choose “Use a folder on this Mac instead”.</p>
   </div>
@@ -387,7 +389,7 @@
   <details><summary>Can it show my whole Google Photos library?</summary>
     <p>No. Google does not let outside apps read a whole library, so the display reads one shared album. A very large album may show only its most recent few hundred photos.</p></details>
   <details><summary>My photos are not appearing.</summary>
-    <p>Check that the album's link sharing is still on and that you pasted the whole link (it starts with <code>https://photos.app.goo.gl/</code>). Reading a shared album is unofficial, so a change at Google can break it until the page is updated.</p></details>
+    <p>Check that the album's link sharing is still on and that you pasted the full album address (it starts with <code>https://photos.google.com/share/</code> and includes <code>?key=</code>), not the short <code>photos.app.goo.gl</code> link. Reading a shared album is unofficial, so a change at Google can break it until the page is updated.</p></details>
   <details><summary>Does Claude here know my other Claude chats or projects?</summary>
     <p>No. This assistant sees only what is on this display: your calendar for today and tomorrow, your lists, timers and the weather. It can add to lists, set timers and alarms and start music. It cannot change your calendar or browse the web.</p></details>
   <details><summary>It does not hear “Hey Claude”.</summary>
@@ -420,6 +422,7 @@
     key:      store.get('key', ''),
     model:    (m => m === 'claude-sonnet-5-5' ? 'claude-sonnet-5' : m)(store.get('model', 'claude-sonnet-5')),
     speak:    store.get('speak', true),
+    ttsVoice: store.get('ttsVoice', ''),
     newsFrom: store.get('newsFrom', 6),
     newsTo:   store.get('newsTo', 10),
     newsMode: store.get('newsMode', 'auto'),
@@ -496,6 +499,8 @@
 
   /* ================= photos ================= */
   const IMG = /\.(jpe?g|png|webp|gif|avif|bmp)$/i;
+  // Short links now resolve with JavaScript on Google's side, which the helper cannot run.
+  const SHORT_LINK = /^https:\/\/(photos\.app\.goo\.gl|goo\.gl\/photos)\//;
   const ALBUM_OK = /^https:\/\/(photos\.app\.goo\.gl\/|photos\.google\.com\/share\/|goo\.gl\/photos\/)/;
   const slides = [...document.querySelectorAll('.slide')];
   let photos = [], order = [], pos = -1, front = 0, timer = null, paused = false, busy = false;
@@ -530,13 +535,14 @@
   let albumSig = '';
   async function loadAlbum(link, quiet){
     link = (link || '').trim();
-    if (!ALBUM_OK.test(link)){ toast('That does not look like a Google Photos share link. It should start with https://photos.app.goo.gl/', 9000); return false; }
+    if (!ALBUM_OK.test(link)){ toast('That does not look like a Google Photos share link. It should start with https://photos.google.com/share/', 9000); return false; }
     if (!quiet) toast('Opening your album…', 20000);
     let urls;
     try{
       const html = await relayText(link, t => /lh3\.googleusercontent\.com/.test(t));
       urls = extractAlbum(html);
     }catch(e){
+      if (SHORT_LINK.test(link)){ if (!quiet) toast('Google\'s short album links no longer work here. Open your link in a new tab, wait for the album, copy the full address from the address bar (https://photos.google.com/share/…?key=…) and paste that instead.', 20000); return false; }
       if (!quiet) toast('Could not open that album. Check that link sharing is on, then try again. If it keeps failing, the relay services may be down.', 12000);
       return false;
     }
@@ -1126,10 +1132,40 @@
     clearTimeout(bubbleT); bubbleT = setTimeout(() => $('#cBubble').classList.remove('show'), 90 * 1000);
   }
   function stopSpeaking(){ try{ speechSynthesis.cancel(); }catch(e){} speaking = false; }
+  // '' means automatic: the most natural installed English voice.
+  function voices(){ try{ return speechSynthesis.getVoices().filter(v => /^en(-|_|$)/i.test(v.lang)); }catch(e){ return []; } }
+  function voiceRank(v){
+    const n = v.name;
+    return (/\(Premium\)/.test(n) ? 0 : /\(Enhanced\)/.test(n) ? 10 : /^Google /.test(n) ? 20 : 40) + (/en[-_]US/i.test(v.lang) ? 0 : 5) + (v.localService ? 0 : 1);
+  }
+  function pickVoice(){
+    const vs = voices();
+    return vs.find(v => v.name === cfg.ttsVoice) || vs.slice().sort((a, b) => voiceRank(a) - voiceRank(b))[0] || null;
+  }
+  function fillVoices(){
+    const sel = $('#sVoice'); if (!sel) return;
+    const vs = voices().sort((a, b) => voiceRank(a) - voiceRank(b) || a.name.localeCompare(b.name));
+    sel.textContent = '';
+    const best = vs.slice().sort((a, b) => voiceRank(a) - voiceRank(b))[0];
+    sel.appendChild(el('option', '', 'Automatic' + (best ? ' (' + best.name + ')' : ''))).value = '';
+    vs.forEach(v => { const o = el('option', '', v.name + (v.lang ? ' · ' + v.lang : '')); o.value = v.name; sel.appendChild(o); });
+    sel.value = vs.some(v => v.name === cfg.ttsVoice) ? cfg.ttsVoice : '';
+  }
+  try{ speechSynthesis.addEventListener('voiceschanged', fillVoices); }catch(e){}
+  $('#sVoice').addEventListener('change', e => {
+    try{
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance('Hi, this is how I will sound on your display.');
+      const v = voices().find(x => x.name === e.target.value) || voices().sort((a, b) => voiceRank(a) - voiceRank(b))[0];
+      if (v){ u.voice = v; u.lang = v.lang; }
+      speechSynthesis.speak(u);
+    }catch(err){}
+  });
   function speak(text){
     if (!cfg.speak || !('speechSynthesis' in window)) { armedUntil = Date.now() + 9000; return; }
     stopSpeaking();
     const u = new SpeechSynthesisUtterance(text.slice(0, 900));
+    const v = pickVoice(); if (v){ u.voice = v; u.lang = v.lang; }
     u.rate = 1.03;
     const done = () => { setTimeout(() => { speaking = false; armedUntil = Date.now() + 9000; }, 350); };
     u.onend = done; u.onerror = done;
@@ -1220,13 +1256,15 @@
     while (convo.length > 16 || (convo.length && convo[0].role !== 'user')) convo.shift();
     const messages = convo.map(m => ({ role: m.role, content: m.content }));
     let answer = '', usedTool = false;
+    // Snapshot the display once per question. Re-reading it after each tool call made Claude see its own additions and think they were already there.
+    const system = SYSTEM + '\n\nCurrent state of the display when the user asked:\n' + stateText();
     try{
       for (let round = 0; round < 5; round++){
         const res = await fetch('https://api.anthropic.com/v1/messages', {
           method: 'POST', signal: ctl.signal,
           headers: { 'content-type': 'application/json', 'x-api-key': cfg.key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
           // Low effort keeps spoken answers quick; max_tokens leaves room for the model's thinking as well as the reply.
-          body: JSON.stringify({ model: cfg.model, max_tokens: 2000, output_config: { effort: 'low' }, system: SYSTEM + '\n\nCurrent state of the display:\n' + stateText(), tools: TOOLS, messages })
+          body: JSON.stringify({ model: cfg.model, max_tokens: 2000, output_config: { effort: 'low' }, system, tools: TOOLS, messages })
         });
         if (!res.ok){
           let detail = ''; try{ detail = (await res.json()).error.message || ''; }catch(e){}
@@ -1374,7 +1412,7 @@
   const dlg = $('#settings');
   $('#bSet').addEventListener('click', () => {
     $('#sAlbum').value = cfg.album; $('#sInterval').value = cfg.interval; $('#sCal').value = cfg.ical;
-    $('#sStatus').value = cfg.status; $('#sRadio').value = cfg.radio; $('#sKey').value = cfg.key; $('#sModel').value = cfg.model; $('#sSpeak').checked = cfg.speak; $('#sWake').value = cfg.wake;
+    $('#sStatus').value = cfg.status; $('#sRadio').value = cfg.radio; $('#sKey').value = cfg.key; $('#sModel').value = cfg.model; $('#sSpeak').checked = cfg.speak; fillVoices(); $('#sWake').value = cfg.wake;
     $('#sCity').value = cfg.place ? cfg.place.name : ''; $('#sUnit').value = cfg.unit; $('#sFrom').value = cfg.newsFrom; $('#sTo').value = cfg.newsTo; $('#sTopic').value = cfg.topic;
     dlg.showModal();
   });
@@ -1387,7 +1425,7 @@
     set('wake', $('#sWake').value.trim() || 'hey claude'); buildWake();
     set('unit', $('#sUnit').value);
     set('status', $('#sStatus').value.trim()); set('radio', $('#sRadio').value.trim()); loadStatus();
-    set('key', $('#sKey').value.trim()); set('model', $('#sModel').value.trim() || 'claude-sonnet-5'); set('speak', $('#sSpeak').checked);
+    set('key', $('#sKey').value.trim()); set('model', $('#sModel').value.trim() || 'claude-sonnet-5'); set('speak', $('#sSpeak').checked); set('ttsVoice', $('#sVoice').value);
     const topic = $('#sTopic').value.trim();
     if (topic !== cfg.topic){ set('topic', topic); newsAt = 0; news = []; }
     if (cfg.newsMode !== 'auto') set('newsMode', 'auto');

@@ -2,7 +2,14 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b0d10">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Home Display">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
 <title>Home Display</title>
 <style>
   :root{
@@ -39,9 +46,16 @@
     font-variant-numeric:tabular-nums}
   #time small{font-size:.28em;font-weight:400;letter-spacing:.04em;margin-left:.3em;color:var(--dim)}
   #date{font-size:clamp(18px,2vw,30px);font-weight:500;margin-top:.5em;color:var(--dim)}
-  #weather{display:none;margin-top:1.1em;align-items:center;gap:1.1em;text-decoration:none;color:var(--ink);
+  #weather{display:none;margin-top:1.1em;color:var(--ink);cursor:pointer;-webkit-user-select:none;user-select:none;
     font-size:clamp(16px,1.5vw,23px)}
-  #weather.ready{display:inline-flex}
+  #weather.ready{display:inline-block}
+  .wxTop{display:flex;align-items:center;gap:1.1em}
+  #wxHours{display:flex;gap:1.05em;margin-top:.75em;padding-top:.7em;border-top:1px solid var(--line);overflow:hidden}
+  .wxHour{text-align:center;font-size:.74em;color:var(--dim);line-height:1.35;flex:0 0 auto}
+  .wxHour span{display:block;font-size:1.45em}
+  .wxHour i{display:block;font-style:normal;font-size:.85em;color:#8fc7ff}
+  /* tap cycles: everything → no 3-day → current only → everything */
+  #weather.noDays #wxDays,#weather.nowOnly #wxDays,#weather.nowOnly #wxHours{display:none}
   #wxNow{display:flex;align-items:center;gap:.4em;font-size:1.7em;font-weight:300}
   #wxText{line-height:1.35;color:var(--dim)}
   #wxText b{color:var(--ink);font-weight:600}
@@ -186,6 +200,49 @@
   #guide a{color:var(--accent)}
   #guide .actions{bottom:0;margin-top:8px;padding:14px 0 18px}
   .actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px;position:sticky;bottom:-26px;background:#15181d;padding:12px 0}
+
+  /* ---------- phones and small screens ---------- */
+  html{-webkit-tap-highlight-color:transparent;-webkit-text-size-adjust:100%}
+  @media (max-width:700px),(max-height:500px){
+    #bar{left:max(3vw,env(safe-area-inset-left));right:max(3vw,env(safe-area-inset-right));top:max(2vh,env(safe-area-inset-top));flex-wrap:wrap;justify-content:flex-end;gap:6px}
+    #bar button{padding:7px 12px;font-size:13px}
+    #hint{display:none}
+    /* inputs under 16px make iPhone zoom in */
+    input,select,#cInput,#listInput,.row input,.row select{font-size:16px}
+    dialog{padding:20px}
+    .row{flex-wrap:wrap}
+    .row input,.row select{width:100%}
+    .row input.sm{width:70px}
+    .row input[type=checkbox]{width:20px}
+    #guide{padding:22px 20px 0}
+    #guide .say{grid-template-columns:1fr}
+    #albumRow,#cityRow{flex-direction:column}
+  }
+  /* phone upright */
+  @media (max-width:700px) and (orientation:portrait){
+    #leftTop{left:5vw;right:5vw;width:auto;top:calc(env(safe-area-inset-top) + 2vh + 84px)}
+    #side{left:5vw;right:5vw;width:auto;top:calc(env(safe-area-inset-top) + 30vh);transform:none;max-height:36vh}
+    #corner{left:max(6vw,env(safe-area-inset-left));right:6vw;bottom:calc(env(safe-area-inset-bottom) + 3vh)}
+    #time{font-size:21vw}
+    #date{font-size:18px}
+    #weather{font-size:15px}
+    .wxTop{flex-wrap:wrap;gap:.5em 1.1em}
+    #wxDays{border-left:0;padding-left:0}
+    .wxHour:nth-child(n+7){display:none}
+  }
+  /* phone on its side, e.g. in a dock */
+  @media (max-height:500px) and (orientation:landscape){
+    #corner{left:max(4vw,env(safe-area-inset-left));bottom:max(4vh,env(safe-area-inset-bottom))}
+    #time{font-size:clamp(46px,16vh,92px)}
+    #date{font-size:15px;margin-top:.3em}
+    #weather{font-size:13px;margin-top:.6em}
+    #wxHours{margin-top:.5em;padding-top:.5em}
+    #side{right:max(3vw,env(safe-area-inset-right));top:50%;width:min(360px,38vw);max-height:84vh}
+    #leftTop{left:max(4vw,env(safe-area-inset-left));top:calc(max(2vh,env(safe-area-inset-top)) + 46px);width:min(420px,48vw)}
+    #cBubble{max-height:36vh;padding:12px 16px}
+    .card{padding:12px 16px 10px;border-radius:16px}
+    .rows li{padding:7px 0}
+  }
 </style>
 </head>
 <body>
@@ -213,11 +270,14 @@
 <div id="corner">
   <div id="time"></div>
   <div id="date"></div>
-  <a id="weather" target="_blank" rel="noopener" title="Open full forecast on Weather Underground">
-    <div id="wxNow"><span id="wxIcon"></span><span id="wxTemp"></span></div>
-    <div id="wxText"></div>
-    <div id="wxDays"></div>
-  </a>
+  <div id="weather" role="button" tabindex="0" title="Tap to show less or more">
+    <div class="wxTop">
+      <div id="wxNow"><span id="wxIcon"></span><span id="wxTemp"></span></div>
+      <div id="wxText"></div>
+      <div id="wxDays"></div>
+    </div>
+    <div id="wxHours"></div>
+  </div>
 </div>
 
 <div id="side">
@@ -660,6 +720,7 @@
     if (!p){ $('#weather').classList.remove('ready'); wxSummary = ''; return; }
     const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + p.lat + '&longitude=' + p.lon +
       '&current=temperature_2m,weather_code,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max' +
+      '&hourly=temperature_2m,weather_code,is_day,precipitation_probability' +
       '&temperature_unit=' + cfg.unit + '&timezone=auto&forecast_days=4';
     try{
       const res = await fetch(url, { cache: 'no-store' });
@@ -674,7 +735,21 @@
       const rain = day.precipitation_probability_max[0];
       const line = 'High ' + Math.round(day.temperature_2m_max[0]) + '° · Low ' + Math.round(day.temperature_2m_min[0]) + '°' + (rain != null ? ' · Rain ' + rain + '%' : '');
       text.appendChild(document.createTextNode(line));
-      wxSummary = now.label + ', ' + Math.round(c.temperature_2m) + '° now in ' + p.name + '. Today: ' + line;
+      // Next 8 hours, starting with the next full hour (times are local to the city).
+      const hr = d.hourly, start = hr.time.findIndex(x => x > c.time), hours = $('#wxHours'); hours.textContent = '';
+      const next = start < 0 ? [] : hr.time.slice(start, start + 8).map((x, j) => ({
+        label: new Date(x).toLocaleTimeString([], { hour: 'numeric' }).replace(/\s+/g, ' '),
+        icon: wx(hr.weather_code[start + j], hr.is_day[start + j]).icon,
+        temp: Math.round(hr.temperature_2m[start + j]), rain: hr.precipitation_probability[start + j] }));
+      next.forEach(h => {
+        const n = el('div', 'wxHour', h.label);
+        n.appendChild(el('span', '', h.icon));
+        n.appendChild(document.createTextNode(h.temp + '°'));
+        if (h.rain >= 30) n.appendChild(el('i', '', h.rain + '%'));
+        hours.appendChild(n);
+      });
+      wxSummary = now.label + ', ' + Math.round(c.temperature_2m) + '° now in ' + p.name + '. Today: ' + line +
+        (next.length ? '. Next hours: ' + next.map(h => h.label + ' ' + h.temp + '°' + (h.rain != null ? ' ' + h.rain + '% rain' : '')).join(', ') : '');
       const days = $('#wxDays'); days.textContent = '';
       for (let i = 1; i < Math.min(4, day.time.length); i++){
         const n = el('div', 'wxDay');
@@ -683,9 +758,7 @@
         n.appendChild(document.createTextNode(Math.round(day.temperature_2m_max[i]) + '° / ' + Math.round(day.temperature_2m_min[i]) + '°'));
         days.appendChild(n);
       }
-      const a = $('#weather');
-      a.href = 'https://www.wunderground.com/weather/' + p.lat.toFixed(2) + ',' + p.lon.toFixed(2);
-      a.classList.add('ready');
+      $('#weather').classList.add('ready');
     }catch(e){ /* keep what was showing */ }
   }
   async function findCity(name){
@@ -694,6 +767,15 @@
     if (!d.results || !d.results.length) return null;
     return { name: d.results[0].name, lat: d.results[0].latitude, lon: d.results[0].longitude };
   }
+  const WX_MODES = ['all', 'noDays', 'nowOnly'];
+  function wxMode(m){
+    const w = $('#weather'); WX_MODES.forEach(x => w.classList.toggle(x, x === m && x !== 'all'));
+    cfg.wxMode = m; store.set('wxMode', m);
+  }
+  wxMode(WX_MODES.includes(store.get('wxMode', 'all')) ? store.get('wxMode', 'all') : 'all');
+  const nextWxMode = () => wxMode(WX_MODES[(WX_MODES.indexOf(cfg.wxMode) + 1) % WX_MODES.length]);
+  $('#weather').addEventListener('click', nextWxMode);
+  $('#weather').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); e.stopPropagation(); nextWxMode(); } });
   loadWeather(); setInterval(loadWeather, 15 * 60 * 1000);
 
   /* ================= news (Google News RSS) ================= */
@@ -1396,6 +1478,28 @@
   $('#wClose').addEventListener('click', hideWelcome);
   $('#welcome').addEventListener('click', e => { if (e.target.id === 'welcome') hideWelcome(); });
   $('#bFull').addEventListener('click', fullscreen);
+  // iPhone has no full screen for pages; added to the home screen it opens without browser bars instead.
+  if (!document.documentElement.requestFullscreen) $('#bFull').style.display = 'none';
+  // Phone upright: stack the lists and calendar between the Claude box and the clock instead of overlapping them.
+  const portrait = matchMedia('(max-width:700px) and (orientation:portrait)');
+  function placeSide(){
+    const s = $('#side');
+    if (!portrait.matches){ s.style.top = ''; s.style.maxHeight = ''; return; }
+    const top = $('#leftTop').getBoundingClientRect().bottom + 12, bottom = $('#corner').getBoundingClientRect().top - 16;
+    s.style.top = top + 'px'; s.style.maxHeight = Math.max(0, bottom - top) + 'px';
+  }
+  if (window.ResizeObserver){ const ro = new ResizeObserver(placeSide); ro.observe($('#leftTop')); ro.observe($('#corner')); }
+  window.addEventListener('resize', placeSide);
+  try{ portrait.addEventListener('change', placeSide); }catch(e){}
+  placeSide();
+  // Swipe left or right on the photo to change it.
+  let swipeX = null;
+  window.addEventListener('touchstart', e => { swipeX = e.touches.length === 1 && !e.target.closest('dialog,#welcome,#side,#claude,#bar,#weather') ? e.touches[0].clientX : null; }, { passive: true });
+  window.addEventListener('touchend', e => {
+    if (swipeX === null) return;
+    const dx = e.changedTouches[0].clientX - swipeX; swipeX = null;
+    if (Math.abs(dx) > 60) step(dx < 0 ? 1 : -1);
+  }, { passive: true });
   $('#bNews').addEventListener('click', () => setNews(newsWanted() ? 'off' : 'on'));
   $('#bLists').addEventListener('click', () => { if (!lists.length) toast('Your lists are empty. Say “' + cfg.wake + ', add milk to my shopping list”.', 6000); else setListsHidden(!cfg.listsHidden); });
   $('#bVoice').addEventListener('click', () => { if (wantVoice){ stopVoice(); store.set('voice', false); } else { startVoice(); store.set('voice', true); } });

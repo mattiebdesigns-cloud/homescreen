@@ -429,7 +429,7 @@
     voice:    store.get('voice', true),
     unit:     store.get('unit', 'fahrenheit'),
     place:    store.get('place', null),
-    radio:    store.get('radio', '/radio/'),
+    radio:    store.get('radio', 'https://cedarwater.net/radio/'),
     status:   store.get('status', '/DEVSTATUS.txt')
   };
 
@@ -749,13 +749,19 @@
 
   /* ================= calendar (secret iCal address) ================= */
   let events = [], calState = '';
-  function loadScript(src){
-    return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); });
+  // The browser refuses the script unless its bytes match this hash, so a changed copy on a CDN cannot run here and read the API key.
+  const ICAL_SRI = 'sha512-0izBc1upGYnrS1u1MX7QR+sjFIxZWxLVdNI7cUoHHCutDr5ENjuQRZuS+v+3NFNGfwHSrPoHzBzED0rV651tGw==';
+  function loadScript(src, integrity){
+    return new Promise((res, rej) => {
+      const s = document.createElement('script'); s.src = src;
+      if (integrity){ s.integrity = integrity; s.crossOrigin = 'anonymous'; }
+      s.onload = res; s.onerror = rej; document.head.appendChild(s);
+    });
   }
   async function needIcal(){
     if (window.ICAL) return;
-    try{ await loadScript('https://cdnjs.cloudflare.com/ajax/libs/ical.js/1.5.0/ical.min.js'); }
-    catch(e){ await loadScript('https://unpkg.com/ical.js@1.5.0/build/ical.min.js'); }
+    try{ await loadScript('https://cdnjs.cloudflare.com/ajax/libs/ical.js/1.5.0/ical.min.js', ICAL_SRI); }
+    catch(e){ await loadScript('https://unpkg.com/ical.js@1.5.0/build/ical.min.js', ICAL_SRI); }
   }
   function eventsFromIcs(text, from, to){
     const ICAL = window.ICAL;
@@ -969,11 +975,16 @@
       });
     }catch(e){}
   }
-  function startRing(c){
-    ringing = c;
-    $('#ringTitle').textContent = c.kind === 'timer' ? 'Timer done' : 'Alarm';
-    $('#ringSub').textContent = (c.label ? c.label + ' · ' : '') + fmtTime(new Date(c.end));
+  // ringing holds every timer and alarm that has gone off and not been dismissed yet, so none are lost when several are due together.
+  function startRing(due){
+    const fresh = !ringing;
+    ringing = (ringing || []).concat(due);
+    const timers = ringing.filter(c => c.kind === 'timer').length, alarms = ringing.length - timers;
+    $('#ringTitle').textContent = ringing.length === 1 ? (timers ? 'Timer done' : 'Alarm')
+      : [timers && (timers + (timers === 1 ? ' timer' : ' timers') + ' done'), alarms && (alarms + (alarms === 1 ? ' alarm' : ' alarms'))].filter(Boolean).join(', ');
+    $('#ringSub').textContent = ringing.map(c => (c.label ? c.label + ' · ' : '') + fmtTime(new Date(c.end))).join('   ');
     $('#ring').classList.add('show');
+    if (!fresh) return;
     let n = 0; beep(); clearInterval(chimeT);
     chimeT = setInterval(() => { if (++n > 75) clearInterval(chimeT); else beep(); }, 1600);
   }
@@ -982,7 +993,7 @@
   setInterval(() => {
     const now = Date.now();
     const due = clocks.filter(c => c.end <= now);
-    if (due.length){ clocks = clocks.filter(c => c.end > now); store.set('clocks', clocks); if (!ringing) startRing(due[0]); }
+    if (due.length){ clocks = clocks.filter(c => c.end > now); store.set('clocks', clocks); startRing(due); }
     renderClocks();
   }, 500);
   // Chrome only allows sound after the page has been clicked or typed in once.

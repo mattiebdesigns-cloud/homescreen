@@ -1,0 +1,10 @@
+# Rules for the hub.cedarwater.net document root.
+# On cPanel hosting, add these below the cPanel-generated PHP block in .htaccess rather than replacing it.
+# The microphone and folder picker only work over https, and the page must only
+# ever run on hub.cedarwater.net so no other page on the site can read its storage.
+# .well-known stays reachable over http so AutoSSL can verify the domain.
+RewriteEngine On
+RewriteCond %{REQUEST_URI} !^/\.well-known/
+RewriteCond %{HTTPS} !=on [OR]
+RewriteCond %{HTTP_HOST} !^hub\.cedarwater\.net$ [NC]
+RewriteRule ^ https://hub.cedarwater.net%{REQUEST_URI} [R=301,L]

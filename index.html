@@ -285,10 +285,10 @@
   <div class="row"><label for="sInterval">Seconds per photo</label><input class="sm" id="sInterval" type="number" min="5" max="600"></div>
 
   <h4>Calendar</h4>
-  <div class="row"><label for="sCal">Secret iCal address<small>Google Calendar → Settings → your calendar → “Secret address in iCal format”. Read through this site's own helper when fetch.php is installed, otherwise through a public relay service. Reset the address in Google Calendar any time to cut access.</small></label><input id="sCal" type="url" placeholder="https://calendar.google.com/calendar/ical/…/basic.ics"></div>
+  <div class="row"><label for="sCal">Secret iCal address<small>Google Calendar → Settings → your calendar → “Secret address in iCal format”. Read only through this site's own helper (fetch.php); it is never sent to public relay services. Reset the address in Google Calendar any time to cut access.</small></label><input id="sCal" type="url" placeholder="https://calendar.google.com/calendar/ical/…/basic.ics"></div>
 
   <h4>Claude</h4>
-  <div class="row"><label for="sKey">Anthropic API key<small>From console.anthropic.com. Stored only in this browser. Max plans can claim monthly API credits for this under Settings &gt; Billing on claude.ai.</small></label><input id="sKey" type="password" placeholder="sk-ant-…"></div>
+  <div class="row"><label for="sKey">Anthropic API key<small>From platform.claude.com (the Claude Console). Stored only in this browser. Max plans can claim monthly API credits for this under Settings &gt; Billing on claude.ai.</small></label><input id="sKey" type="password" placeholder="sk-ant-…"></div>
   <div class="row"><label for="sModel">Model</label><input id="sModel" type="text"></div>
   <div class="row"><label for="sSpeak">Read Claude's replies aloud</label><input id="sSpeak" type="checkbox"></div>
   <div class="row"><label for="sWake">Wake word<small>Say it before a command or question</small></label><input id="sWake" type="text"></div>
@@ -383,7 +383,7 @@
   <details><summary>What does it cost?</summary>
     <p>The page is free. Photos, weather, news, calendar, lists, timers and music cost nothing. The Claude assistant uses your own API credit, typically a fraction of a cent to a few cents per question.</p></details>
   <details><summary>Where does my information go?</summary>
-    <p>Your album and calendar are fetched through a small helper on the site hosting this page, or through a public relay service if the host has no helper. Voice recognition is Chrome's, which sends audio to Google while Voice is on. Questions for Claude go to Anthropic with your key. Nothing is stored by this page outside your browser.</p></details>
+    <p>Your album and calendar are fetched through a small helper on the site hosting this page. Without that helper the album goes through a public relay service, and the calendar is not read at all. Voice recognition is Chrome's, which sends audio to Google while Voice is on. Questions for Claude go to Anthropic with your key. Nothing is stored by this page outside your browser.</p></details>
   <details><summary>Can it show my whole Google Photos library?</summary>
     <p>No. Google does not let outside apps read a whole library, so the display reads one shared album. A very large album may show only its most recent few hundred photos.</p></details>
   <details><summary>My photos are not appearing.</summary>
@@ -418,7 +418,7 @@
     album:    store.get('album', ''),
     ical:     store.get('ical', ''),
     key:      store.get('key', ''),
-    model:    store.get('model', 'claude-sonnet-5-5'),
+    model:    (m => m === 'claude-sonnet-5-5' ? 'claude-sonnet-5' : m)(store.get('model', 'claude-sonnet-5')),
     speak:    store.get('speak', true),
     newsFrom: store.get('newsFrom', 6),
     newsTo:   store.get('newsTo', 10),
@@ -462,17 +462,20 @@
     u => u
   ];
   // When fetch.php sits next to this page on the same site, it is used instead and the public relays are never contacted.
-  let helper = null;   // null = not checked yet, true/false afterwards
+  let helper = null, helperAt = 0;   // null = not checked yet; a "no" is rechecked after a few minutes (the Mac may boot before Wi-Fi)
   async function hasHelper(){
-    if (helper !== null) return helper;
+    if (helper === true || (helper === false && Date.now() - helperAt < 5 * 60 * 1000)) return helper;
     if (!/^https?:$/.test(location.protocol)) return (helper = false);
     try{
       const res = await fetch('fetch.php?ping=1', { cache: 'no-store' });
       helper = res.ok && (await res.text()).trim() === 'home-display-ok';
     }catch(e){ helper = false; }
+    helperAt = Date.now();
     return helper;
   }
-  async function relayText(url, valid){
+  // privateUrl: the address is a secret (the calendar), so it never goes to a public relay.
+  async function relayText(url, valid, privateUrl){
+    if (privateUrl && !(await hasHelper())) throw new Error('unreachable');
     if (await hasHelper()){
       const res = await fetch('fetch.php?url=' + encodeURIComponent(url), { cache: 'no-store' });
       if (!res.ok) throw new Error('unreachable');
@@ -800,7 +803,7 @@
     if (!cfg.ical){ events = []; calState = ''; renderCalendar(); return; }
     try{
       await needIcal();
-      const text = await relayText(cfg.ical, t => t.includes('BEGIN:VCALENDAR'));
+      const text = await relayText(cfg.ical, t => t.includes('BEGIN:VCALENDAR'), true);
       const [from, to] = calWindow();
       events = eventsFromIcs(text, from, to); calState = 'ok';
     }catch(e){ if (calState !== 'ok') calState = 'error'; }
@@ -1013,6 +1016,8 @@
   }
   function parseClock(raw){
     let s = digits(String(raw).toLowerCase().replace(/\./g, '').replace(/o'?clock/g, ''))
+      .replace(/\bhalf past (\d{1,2})\b/, '$1:30').replace(/\bquarter (?:past|after) (\d{1,2})\b/, '$1:15')
+      .replace(/\bquarter (?:to|of|till) (\d{1,2})\b/, (m, h) => ((+h + 11) % 12 || 12) + ':45')
       .replace(/\bnoon\b/, '12 pm').replace(/\bmidnight\b/, '12 am').replace(/\bin the morning\b/, 'am').replace(/\b(in the (afternoon|evening)|at night|tonight)\b/, 'pm');
     const m = s.match(/\b(\d{1,2})(?:[:\s]?(\d{2}))?\s*(am|pm)?\b/);
     if (!m) return null;
@@ -1203,30 +1208,33 @@
     convo.push({ role: 'user', content: text });
     while (convo.length > 16 || (convo.length && convo[0].role !== 'user')) convo.shift();
     const messages = convo.map(m => ({ role: m.role, content: m.content }));
-    let answer = '';
+    let answer = '', usedTool = false;
     try{
       for (let round = 0; round < 5; round++){
         const res = await fetch('https://api.anthropic.com/v1/messages', {
           method: 'POST', signal: ctl.signal,
           headers: { 'content-type': 'application/json', 'x-api-key': cfg.key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-          body: JSON.stringify({ model: cfg.model, max_tokens: 700, system: SYSTEM + '\n\nCurrent state of the display:\n' + stateText(), tools: TOOLS, messages })
+          // Low effort keeps spoken answers quick; max_tokens leaves room for the model's thinking as well as the reply.
+          body: JSON.stringify({ model: cfg.model, max_tokens: 2000, output_config: { effort: 'low' }, system: SYSTEM + '\n\nCurrent state of the display:\n' + stateText(), tools: TOOLS, messages })
         });
         if (!res.ok){
           let detail = ''; try{ detail = (await res.json()).error.message || ''; }catch(e){}
           const why = res.status === 401 ? 'The API key was not accepted. Check it in Settings.'
             : res.status === 404 ? 'That model name was not found. Check the model in Settings.'
             : res.status === 429 ? 'The API account is rate limited or out of credit right now.'
-            : res.status === 400 && /credit/i.test(detail) ? 'The API account has no credit. Add some at console.anthropic.com.'
+            : res.status === 400 && /credit/i.test(detail) ? 'The API account has no credit. Add some at platform.claude.com.'
             : res.status >= 500 ? 'Claude is busy right now. Try again in a moment.'
             : 'Claude could not answer (' + res.status + ').' + (detail ? ' ' + detail : '');
           throw new Error(why);
         }
         const data = await res.json();
+        if (data.stop_reason === 'refusal') throw new Error('Claude declined to answer that one.');
         const blocks = Array.isArray(data.content) ? data.content : [];
         const said = blocks.filter(b => b.type === 'text').map(b => b.text).join(' ').trim();
         if (said) answer = said;
         const uses = blocks.filter(b => b.type === 'tool_use');
         if (data.stop_reason === 'tool_use' && uses.length){
+          usedTool = true;
           messages.push({ role: 'assistant', content: blocks });
           messages.push({ role: 'user', content: uses.map(u => ({ type: 'tool_result', tool_use_id: u.id, content: String(execTool(u.name, u.input)) })) });
           if (said) bubble(null, said);
@@ -1234,7 +1242,7 @@
         }
         break;
       }
-      answer = answer || 'Done.';
+      answer = answer || (usedTool ? 'Done.' : 'Sorry, I did not get an answer that time. Try asking again.');
       convo.push({ role: 'assistant', content: answer });
       bubble(null, answer); speak(answer);
     }catch(e){
@@ -1368,7 +1376,7 @@
     set('wake', $('#sWake').value.trim() || 'hey claude'); buildWake();
     set('unit', $('#sUnit').value);
     set('status', $('#sStatus').value.trim()); set('radio', $('#sRadio').value.trim()); loadStatus();
-    set('key', $('#sKey').value.trim()); set('model', $('#sModel').value.trim() || 'claude-sonnet-5-5'); set('speak', $('#sSpeak').checked);
+    set('key', $('#sKey').value.trim()); set('model', $('#sModel').value.trim() || 'claude-sonnet-5'); set('speak', $('#sSpeak').checked);
     const topic = $('#sTopic').value.trim();
     if (topic !== cfg.topic){ set('topic', topic); newsAt = 0; news = []; }
     if (cfg.newsMode !== 'auto') set('newsMode', 'auto');

@@ -72,6 +72,8 @@
   /* tap cycles: everything → no 16-day → today, sun and moon only → everything */
   /* a card the user clicked away; ↺ brings them back */
   #weather .wxCard.off{display:none}
+  /* the Weather button turns all of it off */
+  #weather.ready.wxOff{display:none}
   .wxRow:not(:has(.wxCard:not(.off))){display:none}
   .wxCard{cursor:pointer}
   #wxRestore{display:none;font-size:12px;padding:6px 12px;cursor:pointer}
@@ -396,6 +398,7 @@
 <div id="bar">
   <button id="bPhotos">Photos…</button>
   <button id="bNews" aria-pressed="false">News</button>
+  <button id="bWx" aria-pressed="false">Weather</button>
   <button id="bCal" aria-pressed="false">Calendar</button>
   <button id="bLists" aria-pressed="false">Lists</button>
   <button id="bMusic" aria-pressed="false">Music</button>
@@ -526,6 +529,7 @@
       <li>“…show the news” / “hide the news”</li>
       <li>“…hide the calendar” / “show the calendar”</li>
       <li>“…show my week” / “show the month” / “show today”</li>
+      <li>“…hide the weather” / “show the weather”</li>
       <li>“…hide the 16-day forecast” / “show the full forecast” / “just today's weather”</li>
       <li>“…next” / “pause” / “resume” (photos)</li>
       <li>“…what's left on my calendar today?”</li>
@@ -928,7 +932,7 @@
         '. Sunrise ' + localTime(day.sunrise[0]) + ', sunset ' + localTime(day.sunset[0]) + '. Moon: ' + moon.name + ', ' + Math.round(moon.lit * 100) + '% lit' +
         (next.length ? '. Next hours: ' + next.map(h => h.label + ' ' + h.temp + '°' + (h.rain != null ? ' ' + h.rain + '% rain' : '')).join(', ') : '') +
         '. Next ' + long.length + ' days: ' + long.map(x => x.dt.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }) + ' ' + wx(day.weather_code[long.indexOf(x)], 1).label.toLowerCase() + ' ' + x.hi + '°/' + x.lo + '°' + (x.rain != null ? ' ' + x.rain + '% rain' : '')).join('; ');
-      $('#weather').classList.add('ready'); try{ placeSide(); }catch(err){}
+      $('#weather').classList.add('ready'); $('#bWx').setAttribute('aria-pressed', String(!cfg.wxOff)); try{ placeSide(); }catch(err){}
     }catch(e){ /* keep what was showing */ }
   }
   async function findCity(name){
@@ -947,8 +951,20 @@
     w.classList.toggle('someOff', cfg.wxHidden.length > 0); w.classList.toggle('allOff', cfg.wxHidden.length === keep.length);
     try{ placeSide(); }catch(e){}
   }
+  // The Weather button: all weather off or on. Cards hidden one by one stay as they were.
+  function setWxOff(off){
+    cfg.wxOff = off; store.set('wxOff', off);
+    $('#weather').classList.toggle('wxOff', off);
+    $('#bWx').setAttribute('aria-pressed', String(!!cfg.place && !off));
+    try{ placeSide(); }catch(e){}
+  }
+  $('#bWx').addEventListener('click', () => {
+    if (!cfg.place){ toast('Set your city in Settings to show the weather.', 6000); return; }
+    setWxOff(!cfg.wxOff); pill(cfg.wxOff ? 'Weather hidden' : 'Showing weather', 1500);
+  });
+  setWxOff(store.get('wxOff', false));
   // The three presets voice and Claude use.
-  function wxMode(m){ wxHide(m === 'noDays' ? ['wxLong'] : m === 'nowOnly' ? ['wxLong', 'wxHourly'] : []); }
+  function wxMode(m){ if (cfg.wxOff) setWxOff(false); wxHide(m === 'noDays' ? ['wxLong'] : m === 'nowOnly' ? ['wxLong', 'wxHourly'] : []); }
   {
     const old = store.get('wxMode', null);   // earlier versions stored a preset instead
     wxHide(store.get('wxHidden', old === 'noDays' ? ['wxLong'] : old === 'nowOnly' ? ['wxLong', 'wxHourly'] : []));
@@ -1632,6 +1648,8 @@
     if (/^(show|open)( me)?( my| the)? lists?$/.test(cmd)){ setListsHidden(false); return true; }
     if (/^(hide|close)( my| the)? lists?$/.test(cmd)){ setListsHidden(true); return true; }
     // weather detail
+    if (/^(?:hide|close|turn off|remove)(?: the)? weather$/.test(cmd)){ pill(controlDisplay('weather_hide'), 1800); return true; }
+    if (/^(?:show|open|turn on)(?: me)?(?: the)? weather$/.test(cmd)){ pill(controlDisplay('weather_show').split('.')[0], 1800); return true; }
     if (/^(?:hide|clear|close|remove)(?: the)? (?:16|sixteen)[ -]?day(?: forecast| weather| calendar)?$/.test(cmd)){ pill(controlDisplay('weather_hide_16_day'), 2500); return true; }
     if (/^(?:show|open)(?: me)?(?: the)? (?:(?:16|sixteen)[ -]?day(?: forecast| weather)?|(?:full|whole|long) (?:forecast|weather))$/.test(cmd)){ pill(controlDisplay('weather_all'), 3500); return true; }
     if (/^(?:show )?(?:me )?(?:just|only) (?:today'?s )?weather(?: for today)?$|^(?:just|only) today(?:'s weather)?$/.test(cmd)){ pill(controlDisplay('weather_today_only'), 2500); return true; }
@@ -1664,7 +1682,9 @@
   function controlDisplay(a){
     const wxNote = () => $('#weather').classList.contains('fitDays') ? ' The screen is too short to fit the 16-day forecast right now, so it stays hidden.' : '';
     switch (a){
-      case 'weather_all': wxHide([]); return 'Showing all the weather cards.' + wxNote();
+      case 'weather_hide': setWxOff(true); return 'Hid all the weather.';
+      case 'weather_show': if (!cfg.place) return 'No city is set for the weather; it can be added in Settings.'; setWxOff(false); return 'Showing the weather.' + (cfg.wxHidden.length ? ' Some cards are still hidden; weather_all shows every card.' : '');
+      case 'weather_all': if (cfg.wxOff) setWxOff(false); wxHide([]); return 'Showing all the weather cards.' + wxNote();
       case 'weather_hide_16_day': wxHide(cfg.wxHidden.concat('wxLong')); return 'Hid the 16-day forecast.';
       case 'weather_hide_hourly': wxHide(cfg.wxHidden.concat('wxHourly')); return 'Hid the hourly forecast.';
       case 'weather_hide_today': wxHide(cfg.wxHidden.concat('wxToday')); return 'Hid the today card.';
@@ -1775,7 +1795,7 @@
     if (radio.on) lines.push('Music player: the user\'s radio (Endless Jam), ' + (ytPlaying() ? 'playing' : 'paused') + ' "' + radio.title + '", volume ' + yt.vol + '%');
     else if (yt.frame) lines.push('Music player: ' + (ytPlaying() ? 'playing' : yt.state === 2 ? 'paused' : 'loaded') + ' "' + yt.title + '"' + (yt.by ? ' from ' + yt.by : '') + ', volume ' + yt.vol + '%');
     const wxShown = Object.keys(WX_CARDS).filter(id => !cfg.wxHidden.includes(id)).map(id => WX_CARDS[id]);
-    lines.push('On screen: weather cards ' + (wxShown.length ? wxShown.join(', ') : 'all hidden') +
+    lines.push('On screen: weather ' + (cfg.wxOff ? 'turned off' : 'cards ' + (wxShown.length ? wxShown.join(', ') : 'all hidden')) +
       ($('#weather').classList.contains('fitDays') ? ' (16-day hidden because the screen is short)' : '') +
       '; calendar ' + (!cfg.ical ? 'not connected' : cfg.calHidden ? 'hidden' : cfg.calView + ' view') +
       '; news ' + ($('#news').classList.contains('show') ? 'shown' : 'hidden') + '; lists ' + (lists.length ? (cfg.listsHidden ? 'hidden' : 'shown') : 'empty') +
@@ -1808,8 +1828,8 @@
       input_schema: { type: 'object', properties: {} } },
     { name: 'play_music', description: 'Play a song, artist, album or mood. It plays in the player on the display and queues similar results (or opens a YouTube Music window if no YouTube key is set).',
       input_schema: { type: 'object', properties: { query: { type: 'string', description: 'What to search for, e.g. "Khruangbin August 10" or "calm jazz piano"' } }, required: ['query'] } },
-    { name: 'control_display', description: 'Change what the display shows. These only change the view; nothing is deleted. The weather has five cards: today, sun (sunrise and sunset), moon, next hours, and the 16-day forecast. weather_all shows all of them; the weather_hide_ actions hide one; weather_today_only leaves today, sun and moon.',
-      input_schema: { type: 'object', properties: { action: { type: 'string', enum: ['weather_all', 'weather_hide_16_day', 'weather_hide_hourly', 'weather_hide_today', 'weather_hide_sun', 'weather_hide_moon', 'weather_today_only', 'calendar_show', 'calendar_hide', 'calendar_day', 'calendar_week', 'calendar_month', 'news_show', 'news_hide', 'lists_show', 'lists_hide', 'photos_next', 'photos_previous', 'photos_pause', 'photos_resume'] } }, required: ['action'] } },
+    { name: 'control_display', description: 'Change what the display shows. These only change the view; nothing is deleted. weather_hide and weather_show turn all the weather off or on (like the Weather button). The weather has five cards: today, sun (sunrise and sunset), moon, next hours, and the 16-day forecast. weather_all shows all of them; the weather_hide_ actions hide one; weather_today_only leaves today, sun and moon.',
+      input_schema: { type: 'object', properties: { action: { type: 'string', enum: ['weather_hide', 'weather_show', 'weather_all', 'weather_hide_16_day', 'weather_hide_hourly', 'weather_hide_today', 'weather_hide_sun', 'weather_hide_moon', 'weather_today_only', 'calendar_show', 'calendar_hide', 'calendar_day', 'calendar_week', 'calendar_month', 'news_show', 'news_hide', 'lists_show', 'lists_hide', 'photos_next', 'photos_previous', 'photos_pause', 'photos_resume'] } }, required: ['action'] } },
     { name: 'music_control', description: 'Control the music already playing on the display.',
       input_schema: { type: 'object', properties: { action: { type: 'string', enum: ['pause', 'resume', 'next', 'stop', 'volume_up', 'volume_down', 'hide_card', 'show_card'], description: 'hide_card and show_card change only whether the Music card is visible; the music keeps playing' } }, required: ['action'] } }
   ];
@@ -2004,7 +2024,7 @@
   function fitCorner(){
     const c = $('#corner'), w = $('#weather');
     w.classList.remove('fitDays', 'fitHours');
-    if (!w.classList.contains('ready')) return;
+    if (!w.classList.contains('ready') || cfg.wxOff) return;
     // Claude's reply box comes and goes and floats above the clock, so it does not count.
     const b = $('#cBubble'), reply = b.classList.contains('show') ? b.getBoundingClientRect().height + 10 : 0;
     const top = $('#leftTop').getBoundingClientRect().bottom - reply;

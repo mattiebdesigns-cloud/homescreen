@@ -20,6 +20,14 @@ document.body.classList.remove('active'); out.push((!shown('#wxRestore')?'PASS':
 ['#wxToday','#wxSun','#wxHourly'].forEach(s=>q(s).click());
 out.push((!shown('.wxRow') && shown('#wxRestore')?'PASS':'FAIL')+' with every card hidden, ↺ stays visible so the weather can come back');
 q('#wxRestore').click(); out.push((['#wxToday','#wxSun','#wxMoon','#wxHourly','#wxLong'].every(shown)?'PASS':'FAIL')+' ↺ shows every card again');
+const bw=q('#bWx'); out.push((bw.getAttribute('aria-pressed')==='true'?'PASS':'FAIL')+' Weather button is on');
+q('#wxMoon').click(); bw.click();
+out.push((!shown('#weather') && bw.getAttribute('aria-pressed')==='false' && localStorage.getItem('hd_wxOff')==='true'?'PASS':'FAIL')+' Weather button hides all the weather (remembered)');
+document.body.classList.add('active'); out.push((q('#wxRestore').getClientRects().length===0?'PASS':'FAIL')+' ↺ does not show while the weather is off'); document.body.classList.remove('active');
+bw.click(); out.push((shown('#weather') && shown('#wxToday') && !shown('#wxMoon')?'PASS':'FAIL')+' turning it back on keeps the moon card hidden as before');
+window.__hd.local('hide the weather'); out.push((!shown('#weather')?'PASS':'FAIL')+' voice: "hide the weather"');
+window.__hd.local('show the weather'); out.push((shown('#weather')?'PASS':'FAIL')+' voice: "show the weather"');
+window.__hd.local('hide the weather'); window.__hd.local('show the full forecast'); out.push((shown('#weather') && shown('#wxMoon')?'PASS':'FAIL')+' "show the full forecast" also turns the weather back on');
 const p=document.createElement('pre'); p.id='results'; p.textContent=out.join('\n'); document.body.appendChild(p);
 })();
 </script>

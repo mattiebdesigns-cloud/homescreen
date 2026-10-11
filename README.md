@@ -15,7 +15,7 @@ Live: [hub.cedarwater.net](https://hub.cedarwater.net) (it opens with a setup gu
 ## Features
 
 - **Photos** from a Google Photos shared album (or a folder on the Mac), cross-fading with a slow drift. New photos added to the album appear on their own. Swipe on a phone to change photos.
-- **Clock and weather** from Open-Meteo as small cards: today (feels-like, wind, humidity), sunrise and sunset with hours of daylight, the moon drawn at its current phase (calculated on the device), the next 8 hours, and a 16-day forecast. Click a card to hide it (↺ brings them back); on shorter screens the longer forecasts step aside on their own.
+- **Clock and weather** from Open-Meteo as small cards: today (feels-like, wind, humidity), sunrise and sunset with hours of daylight, the moon drawn at its current phase (calculated on the device), the next 8 hours, and a 16-day forecast. Click a card to hide it (↺ brings them back), or turn all the weather off with the Weather button; on shorter screens the longer forecasts step aside on their own.
 - **Calendar** from Google Calendar's secret iCal address, with a Day / Week / Month switch (a month grid with dots on busy days and what's coming up). Recurring events, all-day events and cancelled instances are handled by ical.js.
 - **News** from Google News RSS, shown automatically in the morning, with an optional topic.
 - **Lists, timers and alarms** handled on the page itself by voice or typing: "add oat milk to my shopping list", "set a pasta timer for 8 minutes", "wake me up at half past 6".

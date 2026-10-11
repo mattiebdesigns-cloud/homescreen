@@ -106,16 +106,35 @@
 
   /* ---------- Claude ---------- */
   #claude{width:100%}
-  #cBubble{background:var(--glass);border:1px solid var(--line);border-left:3px solid var(--claude);border-radius:18px;padding:16px 20px;
-    backdrop-filter:blur(26px) saturate(1.3);-webkit-backdrop-filter:blur(26px) saturate(1.3);
-    max-height:40vh;overflow:auto;opacity:0;transform:translateY(-8px);transition:opacity .5s,transform .5s;pointer-events:none}
-  #cBubble:not(.show){max-height:0;padding-top:0;padding-bottom:0;border-width:0}
+  #cBubble{background:var(--glass);border:1px solid var(--line);border-left:3px solid var(--claude);border-radius:18px;padding:12px 18px 14px;
+    backdrop-filter:blur(26px) saturate(1.3);-webkit-backdrop-filter:blur(26px) saturate(1.3);cursor:pointer;
+    max-height:52vh;display:flex;flex-direction:column;opacity:0;transform:translateY(-8px);transition:opacity .4s,transform .4s;pointer-events:none}
+  #cBubble:not(.show){max-height:0;padding-top:0;padding-bottom:0;border-width:0;overflow:hidden}
   #cBubble.show{opacity:1;transform:none;pointer-events:auto}
-  #cYou{font-size:14px;color:var(--faint);margin-bottom:8px}
-  #cSay{font-size:clamp(17px,1.45vw,22px);line-height:1.42;white-space:pre-wrap}
-  #cLabel{font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--claude);margin-bottom:8px}
+  .cHead{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+  #cLabel{font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--claude)}
+  #cMic{font-size:11px;color:var(--faint);display:none;align-items:center;gap:6px}
+  #cMic.on{display:flex}
+  #cMic::before{content:"";width:7px;height:7px;border-radius:50%;background:#7be08f;box-shadow:0 0 8px #7be08f;animation:pulse 1.1s ease-in-out infinite}
+  #cClose{margin-left:auto;background:none;border:0;color:var(--faint);font-size:16px;padding:0 2px;line-height:1}
+  #cClose:hover{color:var(--ink)}
+  #cLog{display:flex;flex-direction:column;gap:9px;overflow-y:auto;min-height:0;flex:1 1 auto;scrollbar-width:none}
+  #cLog::-webkit-scrollbar{display:none}
+  .msg{font-size:clamp(15px,1.25vw,19px);line-height:1.42;white-space:pre-wrap;overflow-wrap:anywhere}
+  .msg.me{align-self:flex-end;background:rgba(255,255,255,.11);border-radius:14px 14px 4px 14px;padding:6px 12px;max-width:88%}
+  .msg.note{font-size:12.5px;color:var(--faint);line-height:1.3}
+  .msg.note::before{content:"↳ "}
+  .msg.err{color:#ffab98}
+  #cLive{font-style:italic;color:var(--dim);font-size:clamp(14px,1.15vw,17px);margin-top:8px}
+  #cWork{color:var(--claude);font-size:14px;font-weight:600;margin-top:8px;letter-spacing:.01em}
+  #cWork b{display:inline-block;width:1.2em;font-weight:400}
+  #cLive:empty,#cWork:empty{display:none}
   #cForm{margin-top:10px;display:flex;gap:8px;opacity:0;transition:opacity .35s;pointer-events:none}
-  body.active #cForm,#cForm:focus-within{opacity:1;pointer-events:auto}
+  body.active #cForm,#cForm:focus-within,#claude.open #cForm{opacity:1;pointer-events:auto}
+  #claude.open #cBubble{border-bottom-left-radius:0;border-bottom-right-radius:0;border-bottom:0}
+  #claude.open #cForm{margin-top:0;background:var(--glass);border:1px solid var(--line);border-top:0;border-left:3px solid var(--claude);
+    border-radius:0 0 18px 18px;padding:4px 12px 12px;backdrop-filter:blur(26px) saturate(1.3);-webkit-backdrop-filter:blur(26px) saturate(1.3)}
+  #claude.open #cInput{background:rgba(0,0,0,.25)}
   #cInput{flex:1;background:var(--glass);border:1px solid var(--line);border-radius:999px;padding:10px 16px;color:var(--ink);font-size:15px;
     backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);outline:none}
   #cInput:focus{border-color:var(--claude)}
@@ -308,7 +327,7 @@
     #wxLong{display:none}
     #leftTop{left:auto;right:max(3vw,env(safe-area-inset-right));top:calc(max(2vh,env(safe-area-inset-top)) + 46px);width:min(320px,36vw)}
     #side{right:max(3vw,env(safe-area-inset-right));top:calc(max(2vh,env(safe-area-inset-top)) + 96px);width:min(320px,36vw);transform:none;max-height:70vh}
-    #cBubble{max-height:36vh;padding:12px 16px}
+    #cBubble{max-height:46vh;padding:10px 14px 12px}
     .card{padding:12px 16px 10px;border-radius:16px}
     .rows li{padding:7px 0}
   }
@@ -325,13 +344,14 @@
 <div id="leftTop">
 <div id="chips"></div>
 <div id="claude">
-  <div id="cBubble">
-    <div id="cLabel">Claude</div>
-    <div id="cYou"></div>
-    <div id="cSay"></div>
+  <div id="cBubble" title="Click to close the chat">
+    <div class="cHead"><span id="cLabel">Claude</span><span id="cMic">listening</span><button type="button" id="cClose" title="Close the chat">✕</button></div>
+    <div id="cLog" role="log" aria-live="polite"></div>
+    <div id="cLive"></div>
+    <div id="cWork"></div>
   </div>
   <form id="cForm" autocomplete="off">
-    <input id="cInput" type="text" placeholder="Ask Claude, or type a command…">
+    <input id="cInput" type="text" placeholder="Ask Claude, or type a command…" aria-label="Type to Claude">
   </form>
 </div>
 </div>
@@ -402,6 +422,7 @@
   <button id="bCal" aria-pressed="false">Calendar</button>
   <button id="bLists" aria-pressed="false">Lists</button>
   <button id="bMusic" aria-pressed="false">Music</button>
+  <button id="bClaude" aria-pressed="false">Claude</button>
   <button id="bVoice" aria-pressed="false">Voice</button>
   <button id="bFull">Full screen</button>
   <button id="bSet">Settings</button>
@@ -632,7 +653,9 @@
   /* ================= toast + pill ================= */
   let toastT, pillT;
   function toast(msg, ms = 5000){ const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), ms); }
+  let chatOpen = false;
   function pill(msg, ms = 3500){
+    if (chatOpen && !/…$/.test(msg)) chatLine('note', msg);
     const p = $('#pill'); p.textContent = ''; p.appendChild(document.createElement('i')); p.appendChild(document.createTextNode(msg));
     p.classList.add('show'); clearTimeout(pillT); pillT = setTimeout(() => p.classList.remove('show'), ms);
   }
@@ -1757,23 +1780,69 @@
     return 'Unknown display action.';
   }
   function setListsHidden(h){ cfg.listsHidden = h; store.set('listsHidden', h); renderLists(); }
-  function run(cmd){
-    cmd = cmd.trim().replace(/^(?:please\s+|can you\s+|could you\s+)/, '');
-    if (!cmd) return;
-    if (local(cmd)) return;
-    cmd = cmd.replace(/^ask claude\s+(?:to\s+)?/, '');
-    if (cfg.key) askClaude(cmd);
-    else pill('Heard "' + cmd + '". Add a Claude API key in Settings for open questions.', 6000);
+  function run(text){
+    text = String(text).trim().replace(/^(?:please\s+|can you\s+|could you\s+)/i, '');
+    if (!text) return;
+    if (local(text.toLowerCase().replace(/[.!?]+$/, ''))) return;
+    text = text.replace(/^ask claude\s+(?:to\s+)?/i, '');
+    if (cfg.key) askClaude(text);
+    else pill('Heard "' + text + '". Add a Claude API key in Settings for open questions.', 6000);
   }
 
   /* ================= Claude ================= */
-  let convo = [], asking = null, speaking = false, bubbleT = null;
-  function bubble(you, say){
-    if (you != null) $('#cYou').textContent = you ? '“' + you + '”' : '';
-    $('#cSay').textContent = say;
-    $('#cBubble').classList.add('show');
-    clearTimeout(bubbleT); bubbleT = setTimeout(() => $('#cBubble').classList.remove('show'), 90 * 1000);
+  let convo = [], asking = null, speaking = false;
+  const FOLLOW_UP = 20000;   // after Claude answers or asks, a reply needs no wake word for this long
+  /* The chat card: opens on the wake word (or the Claude button, or typing), shows what was said as it is said,
+     Claude's replies and questions, and notes for actions. It stays open until the card or the Claude button is clicked. */
+  function chatLine(kind, text){
+    const log = $('#cLog'), n = el('div', 'msg ' + kind, text);
+    log.appendChild(n); while (log.children.length > 60) log.firstChild.remove();
+    log.scrollTop = log.scrollHeight;
+    return n;
   }
+  const live = text => { $('#cLive').textContent = text || ''; };
+  function openChat(){
+    if (chatOpen) return;
+    chatOpen = true;
+    $('#claude').classList.add('open'); $('#cBubble').classList.add('show');
+    $('#bClaude').setAttribute('aria-pressed', 'true');
+  }
+  function closeChat(){
+    if (!chatOpen) return;
+    chatOpen = false;
+    if (asking) asking.abort();
+    stopSpeaking(); work(false); live('');
+    $('#claude').classList.remove('open'); $('#cBubble').classList.remove('show');
+    $('#cLog').textContent = ''; convo = []; armedUntil = 0; $('#cMic').classList.remove('on');
+    $('#bClaude').setAttribute('aria-pressed', 'false');
+    if (document.activeElement === $('#cInput')) $('#cInput').blur();
+  }
+  // What Claude Code says while it works.
+  const VERBS = ['Thinking', 'Pondering', 'Cogitating', 'Ruminating', 'Mulling', 'Noodling', 'Percolating', 'Brewing', 'Simmering', 'Marinating',
+    'Conjuring', 'Transmogrifying', 'Reticulating', 'Finagling', 'Wrangling', 'Schlepping', 'Moseying', 'Puttering', 'Tinkering', 'Clauding',
+    'Spelunking', 'Discombobulating', 'Flibbertigibbeting', 'Honking', 'Smooshing', 'Whirring', 'Vibing', 'Zigzagging', 'Gallivanting', 'Hatching'];
+  const GLYPHS = ['·', '✢', '✳', '✶', '✻', '✽', '✻', '✶', '✳', '✢'];
+  let workT = null, workG = null;
+  function work(on){
+    clearInterval(workT); clearInterval(workG);
+    const w = $('#cWork'); w.textContent = '';
+    if (!on) return;
+    const glyph = el('b', '', GLYPHS[0]), word = el('span', '', 'Thinking…');
+    w.appendChild(glyph); w.appendChild(word);
+    let g = 0, last = 'Thinking';
+    workG = setInterval(() => { glyph.textContent = GLYPHS[++g % GLYPHS.length]; }, 120);
+    workT = setInterval(() => { let v; do v = VERBS[Math.floor(Math.random() * VERBS.length)]; while (v === last); last = v; word.textContent = v + '…'; }, 1800);
+  }
+  // Something said or typed to the display: shown in the chat, then handled.
+  function say(text){
+    text = String(text || '').trim(); if (!text) return;
+    openChat(); live(''); chatLine('me', text);
+    run(text);
+  }
+  $('#cBubble').addEventListener('click', e => { if (!e.target.closest('#cForm')) closeChat(); });
+  $('#bClaude').addEventListener('click', () => { if (chatOpen) closeChat(); else { openChat(); $('#cInput').focus(); } });
+  // Shows "listening" while a reply needs no wake word.
+  setInterval(() => $('#cMic').classList.toggle('on', chatOpen && wantVoice && Date.now() < armedUntil), 400);
   function stopSpeaking(){ try{ speechSynthesis.cancel(); }catch(e){} speaking = false; if (!ringing) ytDuck(false); }
   // '' means automatic: the most natural installed English voice.
   function voices(){ try{ return speechSynthesis.getVoices().filter(v => /^en(-|_|$)/i.test(v.lang)); }catch(e){ return []; } }
@@ -1805,12 +1874,12 @@
     }catch(err){}
   });
   function speak(text){
-    if (!cfg.speak || !('speechSynthesis' in window)) { armedUntil = Date.now() + 9000; return; }
+    if (!cfg.speak || !('speechSynthesis' in window)) { armedUntil = Date.now() + FOLLOW_UP; return; }
     stopSpeaking();
     const u = new SpeechSynthesisUtterance(text.slice(0, 900));
     const v = pickVoice(); if (v){ u.voice = v; u.lang = v.lang; }
     u.rate = 1.03;
-    const done = () => { setTimeout(() => { speaking = false; armedUntil = Date.now() + 9000; if (!ringing) ytDuck(false); }, 350); };
+    const done = () => { setTimeout(() => { speaking = false; armedUntil = Date.now() + FOLLOW_UP; if (!ringing) ytDuck(false); }, 350); };
     u.onend = done; u.onerror = done;
     speaking = true; ytDuck(true);
     try{ speechSynthesis.speak(u); }catch(e){ speaking = false; }
@@ -1918,11 +1987,10 @@
   }
   async function askClaude(text){
     const key = cleanKey(cfg.key);
-    if (!keyOk(key)){ bubble(text, keyProblem(key, 'the Claude Console') + ' (Settings → Claude)'); return; }
+    if (!keyOk(key)){ openChat(); chatLine('err', keyProblem(key, 'the Claude Console') + ' (Settings → Claude)'); return; }
     if (asking) asking.abort();
     const ctl = asking = new AbortController();
-    stopSpeaking();
-    bubble(text, 'Thinking…');
+    stopSpeaking(); openChat(); work(true);
     convo.push({ role: 'user', content: text });
     while (convo.length > 16 || (convo.length && convo[0].role !== 'user')) convo.shift();
     const messages = convo.map(m => ({ role: m.role, content: m.content }));
@@ -1957,26 +2025,27 @@
           usedTool = true;
           messages.push({ role: 'assistant', content: blocks });
           messages.push({ role: 'user', content: await Promise.all(uses.map(async u => ({ type: 'tool_result', tool_use_id: u.id, content: String(await execTool(u.name, u.input)) }))) });
-          if (said) bubble(null, said);
+          if (said) chatLine('ai', said);
           continue;
         }
         break;
       }
       answer = answer || (usedTool ? 'Done.' : 'Sorry, I did not get an answer that time. Try asking again.');
       convo.push({ role: 'assistant', content: answer });
-      bubble(null, answer); speak(answer);
+      work(false); chatLine('ai', answer); speak(answer);
     }catch(e){
-      convo.pop();
+      if (convo.length && convo[convo.length - 1].role === 'user') convo.pop();
       if (e.name === 'AbortError') return;
-      bubble(null, e.message && !/Failed to fetch|NetworkError/i.test(e.message) ? e.message : 'Could not reach Claude. Check the internet connection.');
-    } finally { if (asking === ctl) asking = null; }
+      work(false);
+      chatLine('err', e.message && !/Failed to fetch|NetworkError/i.test(e.message) ? e.message : 'Could not reach Claude. Check the internet connection.');
+    } finally { if (asking === ctl){ asking = null; work(false); } }
   }
+  $('#cInput').addEventListener('keydown', e => { if (e.key === 'Escape'){ e.preventDefault(); closeChat(); } });
   $('#cForm').addEventListener('submit', e => {
     e.preventDefault();
     const v = $('#cInput').value.trim(); if (!v) return;
     $('#cInput').value = '';
-    if (local(v.toLowerCase().replace(/[.!?]+$/, ''))) return;
-    if (cfg.key) askClaude(v); else pill('Add a Claude API key in Settings to ask open questions.', 6000);
+    say(v);
   });
 
   /* ================= voice ================= */
@@ -1987,7 +2056,10 @@
     let w = esc(cfg.wake.toLowerCase().trim()).replace(/\s+/g, '\\s+');
     // Speech recognition often hears "Claude" as one of these.
     w = w.replace(/claude/g, '(?:claude|claud|cloud|clawed|clod|clyde|klaud|claudia)').replace(/^(?:hey|hay|ok|okay|yo|yoh)\\s\+/, '(?:hey|hay|ok|okay|yo|yoh)\\s+');
-    wakeRe = w ? new RegExp('\\b' + w + '\\b[\\s,.!?]*', 'g') : null;
+    // "Claude" on its own also wakes it, but only as the first word, and without the looser mishearings,
+    // so talking about Claude or the clouds does not open the chat.
+    const bare = /claude/.test(cfg.wake.toLowerCase()) ? '|^\\s*(?:claude|claud|clawed|klaud)\\b' : '';
+    wakeRe = w ? new RegExp('(?:\\b' + w + '\\b' + bare + ')[\\s,.!?]*', 'g') : null;
   }
   function voiceUI(){
     $('#bVoice').setAttribute('aria-pressed', String(wantVoice));
@@ -2031,28 +2103,33 @@
   }
   // Chime, show "Listening…" and turn the music down until the command is heard (or 8 seconds pass).
   function listening(){
-    chime(); armedUntil = Date.now() + 8000; pill('Listening…', 8000); ytDuck(true);
+    chime(); openChat(); armedUntil = Math.max(armedUntil, Date.now() + 8000); if (!$('#cLive').textContent) live('Listening…'); ytDuck(true);
     clearTimeout(listenT); listenT = setTimeout(() => { if (!speaking && !ringing) ytDuck(false); }, 8500);
   }
+  // Words still coming in: the wake word opens the chat right away, and what follows shows as it is said.
+  function lastWake(t){ let m, last = null; if (!wakeRe) return null; wakeRe.lastIndex = 0; while ((m = wakeRe.exec(t))){ last = m; if (!m[0].length) wakeRe.lastIndex++; } return last; }
   function heardInterim(raw){
-    if (!wakeRe || speaking || ringing) return;
-    wakeRe.lastIndex = 0;
-    if (wakeRe.test(raw.toLowerCase())) listening();
+    if (speaking || ringing) return;
+    const w = lastWake(raw.toLowerCase());
+    let after = null;
+    if (w){ listening(); after = raw.slice(w.index + w[0].length); }
+    else if (Date.now() < armedUntil) after = raw;
+    if (after !== null) live(after.trim() ? '“' + after.trim() + '”' : 'Listening…');
   }
   function heard(raw){
-    const t = raw.toLowerCase().trim();
+    const orig = raw.trim(), t = orig.toLowerCase();
     if (ringing && /\b(stop|dismiss|okay|ok|quiet|cancel|thanks|thank you)\b/.test(t)){ stopRing(); return; }
     if (speaking){ if (/\b(stop|quiet|never ?mind)\b/.test(t)) stopSpeaking(); return; }
-    let cmd = null, last = null, m;
-    if (wakeRe){ wakeRe.lastIndex = 0; while ((m = wakeRe.exec(t))){ last = m; if (m[0].length === 0) wakeRe.lastIndex++; } }
-    if (last) cmd = t.slice(last.index + last[0].length);
-    else if (Date.now() < armedUntil) cmd = t;
-    if (cmd === null) return;
+    const last = lastWake(t);
+    let cmd = null;
+    if (last) cmd = orig.slice(last.index + last[0].length);
+    else if (Date.now() < armedUntil) cmd = orig;
+    if (cmd === null){ return; }
     cmd = cmd.replace(/^[\s,.!?]+/, '').replace(/[\s.!?]+$/, '');
     if (!cmd){ listening(); return; }
     if (last) chime();                                       // wake word and command in one breath
     armedUntil = 0; clearTimeout(listenT);
-    run(cmd);
+    say(cmd);
     if (!speaking && !ringing && !asking) ytDuck(false);
   }
 
@@ -2118,7 +2195,8 @@
   }
   function placeSide(){
     const s = $('#side');
-    if (portrait.matches || landscape.matches){ $('#leftTop').style.top = ''; fitCorner(); }
+    // Phones: start below the buttons, however many rows they wrap to.
+    if (portrait.matches || landscape.matches){ $('#leftTop').style.top = ($('#bar').getBoundingClientRect().bottom + 10) + 'px'; fitCorner(); }
     if (!portrait.matches && !landscape.matches){
       // Larger screens: cards start at the top right, a safe gap below the buttons (which may wrap to two rows).
       const bar = $('#bar').getBoundingClientRect(), lt = $('#leftTop');
@@ -2158,13 +2236,13 @@
     if ($('#settings').open || guide.open || e.metaKey || e.ctrlKey || e.altKey) return;
     if (e.key === 'Escape' && welcomeOpen() && photos.length){ hideWelcome(); return; }
     if (/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return;
-    if (e.key === 'Escape'){ if (ringing) stopRing(); stopSpeaking(); if (welcomeOpen()) hideWelcome(); }
+    if (e.key === 'Escape'){ if (ringing) stopRing(); else if (chatOpen) closeChat(); stopSpeaking(); if (welcomeOpen()) hideWelcome(); }
     else if (e.key === 'ArrowRight') step(1);
     else if (e.key === 'ArrowLeft') step(-1);
     else if (e.key === ' '){ e.preventDefault(); setPaused(!paused); }
     else if (e.key === 'f') fullscreen();
     else if (e.key === 'n') setNews(newsWanted() ? 'off' : 'on');
-    else if (e.key === '/'){ e.preventDefault(); $('#cInput').focus(); }
+    else if (e.key === '/'){ e.preventDefault(); openChat(); $('#cInput').focus(); }
   });
 
   /* ================= setup guide ================= */
@@ -2244,7 +2322,8 @@
   wake();
 
   // Hooks used for testing.
-  window.__hd = { ytmAlbums, moonPhase, controlDisplay, heardInterim, chimes: () => chimes, calendarText: async text => { await needIcal(); calText = text; calExpand(); calState = 'ok'; renderCalendar(); }, run, heard, local, parseDuration, parseClock, extractAlbum, eventsFromIcs, state: () => ({ lists, clocks, events, photos: photos.length,
+  window.__hd = { say, closeChat, chatLog: () => [...document.querySelectorAll('#cLog .msg')].map(n => n.className.replace('msg ', '') + ': ' + n.textContent),
+    lastReply: () => { const n = [...document.querySelectorAll('#cLog .ai, #cLog .err')].pop(); return n ? n.textContent : ''; }, ytmAlbums, moonPhase, controlDisplay, heardInterim, chimes: () => chimes, calendarText: async text => { await needIcal(); calText = text; calExpand(); calState = 'ok'; renderCalendar(); }, run, heard, local, parseDuration, parseClock, extractAlbum, eventsFromIcs, state: () => ({ lists, clocks, events, photos: photos.length,
     music: { open: !!yt.frame, hidden: !!cfg.musicHidden, radio: radio.on, radioTitle: radio.title, radioSrc: radio.audio ? radio.audio.getAttribute('src') || '' : '', radioVolume: radio.audio ? radio.audio.volume : null, src: yt.frame ? yt.frame.src : '', title: yt.title, vol: yt.vol, ducked: yt.ducked, sent: yt.log.slice() } }) };
 })();
 </script>

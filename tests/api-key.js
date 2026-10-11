@@ -10,7 +10,7 @@ window.fetch = async (url, opts) => {
   return realFetch(url, opts);
 };
 const S=document.querySelector('#sKey'), save=document.querySelector('#sSave');
-async function trySave(k){ document.querySelector('#bSet').click(); S.value=k; save.click(); await new Promise(r=>setTimeout(r,400)); window.__hd.run('go to my shopping list'); await new Promise(r=>setTimeout(r,400)); return document.querySelector('#cSay').textContent; }
+async function trySave(k){ document.querySelector('#bSet').click(); S.value=k; save.click(); await new Promise(r=>setTimeout(r,400)); window.__hd.run('go to my shopping list'); await new Promise(r=>setTimeout(r,400)); return window.__hd.lastReply(); }
 let r=await trySave(' sk-ant-api03-ABC–def_123​\n');
 out.push((sent.at(-1)==='sk-ant-api03-ABC-def_123' && r==='ok'?'PASS':'FAIL')+' long dash + invisible chars cleaned -> sent "'+sent.at(-1)+'"');
 r=await trySave('sk-ant-api03-AB…CD');

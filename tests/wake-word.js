@@ -8,7 +8,7 @@ const wait=ms=>new Promise(r=>setTimeout(r,ms)), timers=()=>h.state().clocks.len
 await wait(4200); let c0=h.chimes(), n0=timers(); h.heard('yo claude set a timer for 6 minutes');
 out.push((timers()===n0+1 && h.chimes()===c0+1?'PASS':'FAIL')+' "yo claude" + command: runs it and chimes once');
 await wait(4200); c0=h.chimes(); h.heard('yo claude');
-out.push((h.chimes()===c0+1 && /Listening/.test(document.querySelector('#pill').textContent)?'PASS':'FAIL')+' "yo claude" alone: chime and "Listening…"');
+out.push((h.chimes()===c0+1 && /Listening/.test(document.querySelector('#cLive').textContent) && document.querySelector('#claude').classList.contains('open')?'PASS':'FAIL')+' "yo claude" alone: chime and "Listening…"');
 n0=timers(); h.heard('set a timer for 7 minutes'); out.push((timers()===n0+1?'PASS':'FAIL')+' the next phrase is taken as the command');
 await wait(4200); c0=h.chimes(); h.heardInterim('yo cl'); out.push((h.chimes()===c0?'PASS':'FAIL')+' half a wake word does not chime');
 h.heardInterim('yo claude'); out.push((h.chimes()===c0+1?'PASS':'FAIL')+' chimes while the words are still coming in');

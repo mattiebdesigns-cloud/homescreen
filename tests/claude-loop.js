@@ -19,7 +19,7 @@ out.push((sent.length===2 && sent[0].system===sent[1].system?'PASS':'FAIL')+' sa
 out.push((sent[1] && !/milk/i.test(sent[1].system.split('Lists:')[1]||'')?'PASS':'FAIL')+' round 2 snapshot does not show the just-added milk');
 out.push((h.state().lists.some(l=>l.items.some(i=>i.t==='Milk'))?'PASS':'FAIL')+' milk actually added');
 out.push((sent[0] && sent[0].model==='claude-sonnet-5' && sent[0].output_config.effort==='low'?'PASS':'FAIL')+' model + effort: '+(sent[0]&&sent[0].model));
-out.push((document.querySelector('#cSay').textContent==='Added milk.'?'PASS':'FAIL')+' reply shown');
+out.push((window.__hd.lastReply()==='Added milk.'?'PASS':'FAIL')+' reply shown');
 // short link message
 const toast=document.querySelector('#toast');
 document.querySelector('#wAlbum').value='https://photos.app.goo.gl/abcdefg12345';

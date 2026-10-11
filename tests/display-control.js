@@ -18,7 +18,7 @@ out.push((tool(sent) && tool(sent).input_schema.properties.action.enum.includes(
 out.push((/change what the display shows/.test(sent[0].system) && /nothing is deleted/.test(sent[0].system)?'PASS':'FAIL')+' Claude is told it can change the display');
 out.push((/On screen: weather cards Today, Sun, Moon, Next hours, 16-day forecast; calendar day view/.test(sent[0].system)?'PASS':'FAIL')+' Claude sees what is on screen');
 out.push((q('#wxLong').classList.contains('off') && sent[1].messages.at(-1).content[0].content==='Hid the 16-day forecast.'?'PASS':'FAIL')+' the tool hid the 16-day card and reported it');
-out.push((q('#cSay').textContent==='Done, the 16-day forecast is hidden.'?'PASS':'FAIL')+' Claude confirms instead of saying it cannot');
+out.push((h.lastReply()==='Done, the 16-day forecast is hidden.'?'PASS':'FAIL')+' Claude confirms instead of saying it cannot');
 h.local('show the full forecast'); out.push((!document.querySelector('#weather .wxCard.off')?'PASS':'FAIL')+' voice: "show the full forecast"');
 h.local('just today\'s weather'); out.push((q('#wxLong').classList.contains('off') && q('#wxHourly').classList.contains('off') && !q('#wxToday').classList.contains('off')?'PASS':'FAIL')+' voice: "just today\'s weather"');
 h.local('show the full forecast'); h.local('hide the sixteen day forecast'); out.push((q('#wxLong').classList.contains('off') && !q('#wxHourly').classList.contains('off')?'PASS':'FAIL')+' voice: "hide the sixteen day forecast"');

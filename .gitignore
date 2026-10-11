@@ -1,0 +1,5 @@
+# Numbered working copies from before the repo existed; git history now holds every version.
+versions/
+# Session handoff notes (hosting and account details).
+HANDOFF-*.md
+.DS_Store

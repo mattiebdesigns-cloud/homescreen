@@ -10,3 +10,7 @@ RewriteCond %{HTTP_HOST} !^hub\.cedarwater\.net$ [NC]
 RewriteRule ^ https://hub.cedarwater.net%{REQUEST_URI} [R=301,L]
 # Home-screen app manifest
 AddType application/manifest+json .webmanifest
+# Always check for a newer page, so installed apps and open tabs pick up updates.
+<FilesMatch "\.(html|webmanifest|php)$">
+  Header set Cache-Control "no-cache"
+</FilesMatch>

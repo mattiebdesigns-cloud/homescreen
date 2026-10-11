@@ -86,6 +86,7 @@
   #cBubble{background:var(--glass);border:1px solid var(--line);border-left:3px solid var(--claude);border-radius:18px;padding:16px 20px;
     backdrop-filter:blur(26px) saturate(1.3);-webkit-backdrop-filter:blur(26px) saturate(1.3);
     max-height:40vh;overflow:auto;opacity:0;transform:translateY(-8px);transition:opacity .5s,transform .5s;pointer-events:none}
+  #cBubble:not(.show){max-height:0;padding-top:0;padding-bottom:0;border-width:0}
   #cBubble.show{opacity:1;transform:none;pointer-events:auto}
   #cYou{font-size:14px;color:var(--faint);margin-bottom:8px}
   #cSay{font-size:clamp(17px,1.45vw,22px);line-height:1.42;white-space:pre-wrap}
@@ -235,10 +236,10 @@
     #corner{left:max(4vw,env(safe-area-inset-left));bottom:max(4vh,env(safe-area-inset-bottom))}
     #time{font-size:clamp(46px,16vh,92px)}
     #date{font-size:15px;margin-top:.3em}
-    #weather{font-size:13px;margin-top:.6em}
+    #weather{font-size:12.5px;margin-top:.6em}
     #wxHours{margin-top:.5em;padding-top:.5em}
-    #side{right:max(3vw,env(safe-area-inset-right));top:50%;width:min(360px,38vw);max-height:84vh}
-    #leftTop{left:max(4vw,env(safe-area-inset-left));top:calc(max(2vh,env(safe-area-inset-top)) + 46px);width:min(420px,48vw)}
+    #leftTop{left:auto;right:max(3vw,env(safe-area-inset-right));top:calc(max(2vh,env(safe-area-inset-top)) + 46px);width:min(320px,36vw)}
+    #side{right:max(3vw,env(safe-area-inset-right));top:calc(max(2vh,env(safe-area-inset-top)) + 96px);width:min(320px,36vw);transform:none;max-height:70vh}
     #cBubble{max-height:36vh;padding:12px 16px}
     .card{padding:12px 16px 10px;border-radius:16px}
     .rows li{padding:7px 0}
@@ -1496,17 +1497,19 @@
   $('#bFull').addEventListener('click', fullscreen);
   // iPhone has no full screen for pages; added to the home screen it opens without browser bars instead.
   if (!document.documentElement.requestFullscreen) $('#bFull').style.display = 'none';
-  // Phone upright: stack the lists and calendar between the Claude box and the clock instead of overlapping them.
-  const portrait = matchMedia('(max-width:700px) and (orientation:portrait)');
+  // On phones, stack the lists and calendar under the timers and Claude box instead of overlapping them:
+  // upright they end above the clock, sideways they fill the right-hand column.
+  const portrait = matchMedia('(max-width:700px) and (orientation:portrait)'), landscape = matchMedia('(max-height:500px) and (orientation:landscape)');
   function placeSide(){
     const s = $('#side');
-    if (!portrait.matches){ s.style.top = ''; s.style.maxHeight = ''; return; }
-    const top = $('#leftTop').getBoundingClientRect().bottom + 12, bottom = $('#corner').getBoundingClientRect().top - 16;
+    if (!portrait.matches && !landscape.matches){ s.style.top = ''; s.style.maxHeight = ''; return; }
+    const top = $('#leftTop').getBoundingClientRect().bottom + 12;
+    const bottom = portrait.matches ? $('#corner').getBoundingClientRect().top - 16 : window.innerHeight - 12;
     s.style.top = top + 'px'; s.style.maxHeight = Math.max(0, bottom - top) + 'px';
   }
   if (window.ResizeObserver){ const ro = new ResizeObserver(placeSide); ro.observe($('#leftTop')); ro.observe($('#corner')); }
   window.addEventListener('resize', placeSide);
-  try{ portrait.addEventListener('change', placeSide); }catch(e){}
+  try{ portrait.addEventListener('change', placeSide); landscape.addEventListener('change', placeSide); }catch(e){}
   placeSide();
   // Swipe left or right on the photo to change it.
   let swipeX = null;

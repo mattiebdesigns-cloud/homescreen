@@ -165,7 +165,10 @@
   #calList li .wd{color:var(--faint);font-size:.8em;margin-right:6px}
   .mgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin:4px 0 6px;text-align:center;font-variant-numeric:tabular-nums}
   .mgrid .dow{font-size:10px;color:var(--faint);letter-spacing:.08em;padding:2px 0 4px}
-  .mgrid .d{font-size:clamp(12px,.95vw,15px);padding:5px 0 7px;border-radius:9px;position:relative;line-height:1.1}
+  .mgrid .d{font-size:clamp(12px,.95vw,15px);padding:5px 0 7px;border-radius:9px;position:relative;line-height:1.1;cursor:pointer}
+  .mgrid .d:hover{background:rgba(255,255,255,.1)}
+  #calList li.day[data-day]{cursor:pointer}
+  #calList li.back{border-top:0;padding:2px 0 6px;font-size:13px;color:var(--accent);cursor:pointer}
   .mgrid .d.other{color:var(--faint);opacity:.45}
   .mgrid .d.past{color:var(--faint)}
   .mgrid .d.today{background:var(--accent);color:#14161a;font-weight:700}
@@ -1140,7 +1143,20 @@
     }catch(e){ if (calState !== 'ok') calState = 'error'; }
     renderCalendar();
   }
-  function setCalView(v){ cfg.calView = v; store.set('calView', v); renderCalendar(); }
+  // calFocus: a day picked from the month grid or week view; Day view then shows that whole day.
+  let calFocus = null;
+  function setCalView(v){ cfg.calView = v; store.set('calView', v); calFocus = null; renderCalendar(); }
+  function showCalDay(d){
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    cfg.calView = 'day'; store.set('calView', 'day');
+    calFocus = +d === +today ? null : d; renderCalendar();
+  }
+  const isoDay = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  const fromIso = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+  $('#cal').addEventListener('click', e => {
+    const pick = e.target.closest('.mgrid .d[data-day], #calList li[data-day]');
+    if (pick) showCalDay(fromIso(pick.dataset.day));
+  });
   $('#calSeg').addEventListener('click', e => { const b = e.target.closest('button[data-v]'); if (b) setCalView(b.dataset.v); });
   function renderCalendar(){
     const card = $('#cal'), ul = $('#calList'); ul.textContent = '';
@@ -1172,7 +1188,7 @@
       for (let i = 0; i < 7 && room > 0; i++){
         const a = dayAfter(i), b = dayAfter(i + 1), list = upcoming.filter(e => e.start < b && e.end > a && (e.start >= a || i === 0));
         if (!list.length) continue;
-        ul.appendChild(el('li', 'day', dayName(a)));
+        const head = el('li', 'day', dayName(a)); head.dataset.day = isoDay(a); ul.appendChild(head);
         list.slice(0, room).forEach(e => { row(e); room--; shown++; });
       }
       const total = upcoming.filter(e => e.start < end).length;
@@ -1191,11 +1207,23 @@
         const cell = el('div', 'd' + (d.getMonth() !== g.first.getMonth() ? ' other' : '') + (+d === +today ? ' today' : d < today ? ' past' : ''), String(d.getDate()));
         if (n){ const dots = el('span', 'dots'); for (let k = 0; k < Math.min(3, n); k++) dots.appendChild(document.createElement('i')); cell.appendChild(dots); }
         cell.title = n ? n + (n === 1 ? ' event' : ' events') : '';
+        cell.dataset.day = isoDay(d); cell.setAttribute('role', 'button');
         grid.appendChild(cell);
       }
       ul.parentNode.insertBefore(grid, ul);
       ul.appendChild(el('li', 'day', upcoming.length ? 'Coming up' : 'Nothing coming up this month'));
       upcoming.slice(0, 4).forEach(e => row(e, true));
+      return;
+    }
+    // Day, for a picked day: everything on it, and a way back to today
+    if (calFocus){
+      const next = new Date(calFocus); next.setDate(next.getDate() + 1);
+      const list = events.filter(e => e.start < next && e.end > calFocus && !(e.allDay && +e.end === +calFocus));
+      $('#calSub').textContent = calFocus.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' });
+      const back = el('li', 'back', '← Today'); back.dataset.day = isoDay(today); ul.appendChild(back);
+      if (!list.length) ul.appendChild(el('li', 'day', 'Nothing on ' + calFocus.toLocaleDateString([], { weekday: 'long' })));
+      list.slice(0, 8).forEach(e => row(e));
+      if (list.length > 8) ul.appendChild(el('li', 'day', '+' + (list.length - 8) + ' more'));
       return;
     }
     // Day: the rest of today, then tomorrow if there is room

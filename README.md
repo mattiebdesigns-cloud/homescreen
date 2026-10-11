@@ -69,7 +69,7 @@ browser ──► index.html ──────────────► api.a
 tests/run.sh
 ```
 
-Runs 89 checks in headless Google Chrome against the real `index.html`: duration and clock-time parsing, local commands, wake-word matching, album and iCal parsing, ringing several timers at once, the Claude tool loop (with the API faked), the photo screen, API-key cleaning, the calendar toggle, the music player and the radio. No accounts or keys are needed. The page exposes `window.__hd` (`run`, `heard`, `local`, `parseDuration`, `parseClock`, `extractAlbum`, `eventsFromIcs`, `state`) for driving it without a microphone.
+Runs 100 checks in headless Google Chrome against the real `index.html`: duration and clock-time parsing, local commands, wake-word matching, album and iCal parsing, ringing several timers at once, the Claude tool loop (with the API faked), the photo screen, API-key cleaning, the calendar toggle, the music player, the radio and hiding the Music card. No accounts or keys are needed. The page exposes `window.__hd` (`run`, `heard`, `local`, `parseDuration`, `parseClock`, `extractAlbum`, `eventsFromIcs`, `state`) for driving it without a microphone.
 
 ## History
 

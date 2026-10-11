@@ -138,6 +138,9 @@
   #player .ctl{background:rgba(255,255,255,.08);border:1px solid var(--line);border-radius:999px;width:38px;height:38px;font-size:15px;line-height:1;flex:0 0 auto;padding:0}
   #player .ctl:hover{background:rgba(255,255,255,.16)}
   #player.radio .frame{display:none}
+  /* Hidden by moving it off-screen, not display:none: Chrome slows down hidden frames from other sites,
+     which could stall YouTube. The music keeps playing. */
+  #player.show.hidden{position:fixed;left:-10000px;top:0;width:320px;opacity:0;pointer-events:none}
   #player.radio .np{padding:6px 0 2px}
   #ytOpen{display:none}
   #player.radio #ytOpen{display:inline-block}
@@ -342,6 +345,7 @@
   <button id="bNews" aria-pressed="false">News</button>
   <button id="bCal" aria-pressed="false">Calendar</button>
   <button id="bLists" aria-pressed="false">Lists</button>
+  <button id="bMusic" aria-pressed="false">Music</button>
   <button id="bVoice" aria-pressed="false">Voice</button>
   <button id="bFull">Full screen</button>
   <button id="bSet">Settings</button>
@@ -464,6 +468,7 @@
       <li>“…cross off oat milk on my shopping list”</li>
       <li>“…play Khruangbin” (on screen with a YouTube key)</li>
       <li>“…pause the music” / “next song” / “turn it up”</li>
+      <li>“…hide the music” / “show the music” (keeps playing)</li>
       <li>“…put on some jams” (your radio page)</li>
       <li>“…show the news” / “hide the news”</li>
       <li>“…hide the calendar” / “show the calendar”</li>
@@ -542,6 +547,7 @@
     newsMode: store.get('newsMode', 'auto'),
     listsHidden: store.get('listsHidden', false),
     calHidden: store.get('calHidden', false),
+    musicHidden: store.get('musicHidden', false),
     topic:    store.get('topic', ''),
     wake:     store.get('wake', 'hey claude'),
     voice:    store.get('voice', true),
@@ -832,7 +838,7 @@
 
   /* ================= news (Google News RSS) ================= */
   let news = [], newsAt = 0, newsPage = 0, newsBusy = false;
-  const perPage = () => ['#cal', '#lists', '#player'].some(s => $(s).classList.contains('show')) ? 3 : 5;
+  const perPage = () => ['#cal', '#lists', '#player'].some(s => $(s).classList.contains('show') && !$(s).classList.contains('hidden')) ? 3 : 5;
   function feedUrl(){
     const tail = 'hl=en-US&gl=US&ceid=US:en';
     return cfg.topic.trim() ? 'https://news.google.com/rss/search?q=' + encodeURIComponent(cfg.topic.trim()) + '&' + tail : 'https://news.google.com/rss?' + tail;
@@ -1254,7 +1260,7 @@
       if (!/^\/api\/stream\/[A-Za-z0-9_-]+$/.test(String(d.stream_url || ''))) throw new Error('no track');
       radio.title = String(d.display_name || d.name || 'Endless Jam'); radio.date = String(d.date_hint || ''); radio.tries = 0;
       const a = radioAudio(); a.src = RADIO_API + d.stream_url; applyVolume();
-      a.play().catch(() => pill('Tap ▶ on the Music card to start the radio', 6000));
+      a.play().catch(() => { if (cfg.musicHidden) setMusicHidden(false); pill('Tap ▶ on the Music card to start the radio', 6000); });
     }catch(e){
       if (!radio.on) return;
       // The radio's server sleeps when idle and takes up to a minute to wake.
@@ -1321,7 +1327,7 @@
     yt.frame = f; $('#ytBox').textContent = ''; $('#ytBox').appendChild(f);
     $('#player').classList.add('show'); ytRender(); layoutChanged();
     clearTimeout(yt.nudge);
-    yt.nudge = setTimeout(() => { if (yt.frame === f && !ytPlaying()) pill('Tap the video to start the music', 6000); }, 7000);
+    yt.nudge = setTimeout(() => { if (yt.frame === f && !ytPlaying()){ if (cfg.musicHidden) setMusicHidden(false); pill('Tap the video to start the music', 6000); } }, 7000);
   }
   function ytStop(quiet){
     clearInterval(yt.hello); clearTimeout(yt.nudge);
@@ -1374,7 +1380,13 @@
       return music(q) ? 'YouTube search failed (' + e.message + '); opened a YouTube Music window instead.' : 'YouTube search failed: ' + e.message;
     }
   }
-  function layoutChanged(){ if (news.length) renderNews(); try{ placeSide(); }catch(e){} }
+  // The Music button hides the card only; the player stays in the page and keeps playing.
+  function setMusicHidden(h){ cfg.musicHidden = h; store.set('musicHidden', h); layoutChanged(); }
+  function layoutChanged(){
+    $('#player').classList.toggle('hidden', !!cfg.musicHidden);
+    $('#bMusic').setAttribute('aria-pressed', String(musicOn() && !cfg.musicHidden));
+    if (news.length) renderNews(); try{ placeSide(); }catch(e){}
+  }
 
   /* ================= local commands ================= */
   // Returns true when the command was handled without Claude.
@@ -1423,6 +1435,8 @@
     if ((m = cmd.match(/^(?:clear|empty)\s+(?:my|the)\s+(?:(.+?)\s+)?list$/))){ listClear(m[1]); pill('List cleared', 2500); return true; }
     if (/^(show|open)( me)?( my| the)? lists?$/.test(cmd)){ setListsHidden(false); return true; }
     if (/^(hide|close)( my| the)? lists?$/.test(cmd)){ setListsHidden(true); return true; }
+    if (/^(show|open)( me)?( the| my)? (music|player|music player)$/.test(cmd)){ if (musicOn()){ setMusicHidden(false); pill('Showing music', 1500); } else pill('Nothing is playing', 2000); return true; }
+    if (/^(hide|close)( the| my)? (music|player|music player)$/.test(cmd)){ setMusicHidden(true); pill(musicOn() ? 'Music hidden; still playing' : 'Music card will stay hidden', 2000); return true; }
     if (/^(show|open)( me)?( my| the)? calendar$/.test(cmd)){ pill('Showing calendar', 1500); setCalHidden(false); return true; }
     if (/^(hide|close)( my| the)? calendar$/.test(cmd)){ pill('Hiding calendar', 1500); setCalHidden(true); return true; }
     // slideshow + news
@@ -1553,7 +1567,7 @@
     { name: 'play_music', description: 'Play a song, artist, album or mood. It plays in the player on the display and queues similar results (or opens a YouTube Music window if no YouTube key is set).',
       input_schema: { type: 'object', properties: { query: { type: 'string', description: 'What to search for, e.g. "Khruangbin August 10" or "calm jazz piano"' } }, required: ['query'] } },
     { name: 'music_control', description: 'Control the music already playing on the display.',
-      input_schema: { type: 'object', properties: { action: { type: 'string', enum: ['pause', 'resume', 'next', 'stop', 'volume_up', 'volume_down'] } }, required: ['action'] } }
+      input_schema: { type: 'object', properties: { action: { type: 'string', enum: ['pause', 'resume', 'next', 'stop', 'volume_up', 'volume_down', 'hide_card', 'show_card'], description: 'hide_card and show_card change only whether the Music card is visible; the music keeps playing' } }, required: ['action'] } }
   ];
   async function execTool(name, input){
     input = input || {};
@@ -1581,7 +1595,8 @@
         if (!musicOn()) return 'No music is playing on the display.';
         const a = input.action;
         if (a === 'pause') ytPause(); else if (a === 'resume') ytResume(); else if (a === 'next') ytNext(); else if (a === 'stop') musicStop();
-        else if (a === 'volume_up') ytVolume(20); else if (a === 'volume_down') ytVolume(-20); else return 'Unknown action.';
+        else if (a === 'volume_up') ytVolume(20); else if (a === 'volume_down') ytVolume(-20);
+        else if (a === 'hide_card') setMusicHidden(true); else if (a === 'show_card') setMusicHidden(false); else return 'Unknown action.';
         return 'Done: ' + a + '.';
       }
     }catch(e){ return 'Error: ' + e.message; }
@@ -1768,6 +1783,10 @@
     if (Math.abs(dx) > 60) step(dx < 0 ? 1 : -1);
   }, { passive: true });
   $('#bNews').addEventListener('click', () => setNews(newsWanted() ? 'off' : 'on'));
+  $('#bMusic').addEventListener('click', () => {
+    if (!musicOn()){ toast('Nothing is playing. Say “' + cfg.wake + ', play …” or “put on some jams”.' + (cfg.musicHidden ? ' The Music card is set to stay hidden; press Music again while something plays to show it.' : ''), 7000); return; }
+    setMusicHidden(!cfg.musicHidden);
+  });
   $('#bCal').addEventListener('click', () => { if (!cfg.ical) toast('No calendar connected yet. Add your Google Calendar\'s secret iCal address in Settings.', 7000); else setCalHidden(!cfg.calHidden); });
   $('#bLists').addEventListener('click', () => { if (!lists.length) toast('Your lists are empty. Say “' + cfg.wake + ', add milk to my shopping list”.', 6000); else setListsHidden(!cfg.listsHidden); });
   $('#bVoice').addEventListener('click', () => { if (wantVoice){ stopVoice(); store.set('voice', false); } else { startVoice(); store.set('voice', true); } });
@@ -1863,7 +1882,7 @@
 
   // Hooks used for testing.
   window.__hd = { run, heard, local, parseDuration, parseClock, extractAlbum, eventsFromIcs, state: () => ({ lists, clocks, events, photos: photos.length,
-    music: { open: !!yt.frame, radio: radio.on, radioTitle: radio.title, radioSrc: radio.audio ? radio.audio.getAttribute('src') || '' : '', radioVolume: radio.audio ? radio.audio.volume : null, src: yt.frame ? yt.frame.src : '', title: yt.title, vol: yt.vol, ducked: yt.ducked, sent: yt.log.slice() } }) };
+    music: { open: !!yt.frame, hidden: !!cfg.musicHidden, radio: radio.on, radioTitle: radio.title, radioSrc: radio.audio ? radio.audio.getAttribute('src') || '' : '', radioVolume: radio.audio ? radio.audio.volume : null, src: yt.frame ? yt.frame.src : '', title: yt.title, vol: yt.vol, ducked: yt.ducked, sent: yt.log.slice() } }) };
 })();
 </script>
 </body>

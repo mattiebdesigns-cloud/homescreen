@@ -7,7 +7,7 @@ cd "$(dirname "$0")"
 CHROME=${CHROME:-"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"}
 TMP=$(mktemp -d); trap 'rm -rf "$TMP"' EXIT
 # test file : setup file (blank for none)
-SUITES="core.js: wake-word.js: ringing.js: claude-loop.js:setup-with-key.js music.js:setup-with-youtube.js radio.js:setup-with-youtube.js photo-screen.js:setup-with-key.js api-key.js:setup-with-key.js calendar-toggle.js:setup-with-calendar.js"
+SUITES="core.js: wake-word.js: ringing.js: claude-loop.js:setup-with-key.js music.js:setup-with-youtube.js radio.js:setup-with-youtube.js music-toggle.js:setup-with-youtube.js photo-screen.js:setup-with-key.js api-key.js:setup-with-key.js calendar-toggle.js:setup-with-calendar.js"
 pass=0; fail=0
 for pair in $SUITES; do
   t=${pair%%:*}; setup=${pair#*:}

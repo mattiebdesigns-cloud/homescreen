@@ -516,7 +516,7 @@
 
   <div class="step">
     <h5>Things to say</h5>
-    <p>Start with the wake word, <b>“Hey Claude”</b> (you can change it in Settings).</p>
+    <p>Start with the wake word, <b>“Hey Claude”</b> or <b>“Yo Claude”</b> (you can change it in Settings). A short chime means Claude is listening.</p>
     <ul class="say">
       <li>“…set a timer for 10 minutes”</li>
       <li>“…set an alarm for 7 am”</li>
@@ -1937,7 +1937,7 @@
     const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     let w = esc(cfg.wake.toLowerCase().trim()).replace(/\s+/g, '\\s+');
     // Speech recognition often hears "Claude" as one of these.
-    w = w.replace(/claude/g, '(?:claude|claud|cloud|clawed|clod|clyde|klaud|claudia)').replace(/^hey\\s\+/, '(?:hey|hay|ok|okay)\\s+');
+    w = w.replace(/claude/g, '(?:claude|claud|cloud|clawed|clod|clyde|klaud|claudia)').replace(/^(?:hey|hay|ok|okay|yo|yoh)\\s\+/, '(?:hey|hay|ok|okay|yo|yoh)\\s+');
     wakeRe = w ? new RegExp('\\b' + w + '\\b[\\s,.!?]*', 'g') : null;
   }
   function voiceUI(){
@@ -1949,8 +1949,10 @@
     if (!SR){ toast('Voice needs Google Chrome.'); return; }
     wantVoice = true; voiceUI();
     if (rec) return;
-    const r = new SR(); r.continuous = true; r.interimResults = false; r.lang = 'en-US';
-    r.onresult = e => { for (let i = e.resultIndex; i < e.results.length; i++){ if (e.results[i].isFinal) heard(e.results[i][0].transcript); } };
+    const r = new SR(); r.continuous = true; r.interimResults = true; r.lang = 'en-US';
+    // Words in progress are checked for the wake word so the chime comes as soon as it is said;
+    // commands still run from the finished phrase.
+    r.onresult = e => { for (let i = e.resultIndex; i < e.results.length; i++){ const tx = e.results[i][0].transcript; if (e.results[i].isFinal) heard(tx); else heardInterim(tx); } };
     r.onerror = e => {
       if (e.error === 'not-allowed' || e.error === 'service-not-allowed'){
         wantVoice = false; voiceUI();
@@ -1961,6 +1963,33 @@
     try{ r.start(); rec = r; }catch(e){ rec = null; }
   }
   function stopVoice(){ wantVoice = false; voiceUI(); if (rec){ try{ rec.stop(); }catch(e){} } }
+  // A rising two-note chime: the wake word was heard and Claude is listening.
+  let lastChime = 0, chimes = 0, listenT = null;
+  function chime(){
+    if (Date.now() - lastChime < 4000) return;            // once per wake word, even if heard twice
+    lastChime = Date.now(); chimes++;
+    try{
+      audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+      if (audio.state === 'suspended') audio.resume();
+      const t0 = audio.currentTime;
+      [[660, 0], [990, 0.11]].forEach(([f, dt]) => {
+        const o = audio.createOscillator(), g = audio.createGain();
+        o.type = 'sine'; o.frequency.value = f;
+        g.gain.setValueAtTime(0.0001, t0 + dt); g.gain.exponentialRampToValueAtTime(0.22, t0 + dt + 0.015); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dt + 0.14);
+        o.connect(g); g.connect(audio.destination); o.start(t0 + dt); o.stop(t0 + dt + 0.16);
+      });
+    }catch(e){}
+  }
+  // Chime, show "Listening…" and turn the music down until the command is heard (or 8 seconds pass).
+  function listening(){
+    chime(); armedUntil = Date.now() + 8000; pill('Listening…', 8000); ytDuck(true);
+    clearTimeout(listenT); listenT = setTimeout(() => { if (!speaking && !ringing) ytDuck(false); }, 8500);
+  }
+  function heardInterim(raw){
+    if (!wakeRe || speaking || ringing) return;
+    wakeRe.lastIndex = 0;
+    if (wakeRe.test(raw.toLowerCase())) listening();
+  }
   function heard(raw){
     const t = raw.toLowerCase().trim();
     if (ringing && /\b(stop|dismiss|okay|ok|quiet|cancel|thanks|thank you)\b/.test(t)){ stopRing(); return; }
@@ -1971,9 +2000,11 @@
     else if (Date.now() < armedUntil) cmd = t;
     if (cmd === null) return;
     cmd = cmd.replace(/^[\s,.!?]+/, '').replace(/[\s.!?]+$/, '');
-    if (!cmd){ armedUntil = Date.now() + 8000; pill('Listening…', 8000); return; }
-    armedUntil = 0;
+    if (!cmd){ listening(); return; }
+    if (last) chime();                                       // wake word and command in one breath
+    armedUntil = 0; clearTimeout(listenT);
     run(cmd);
+    if (!speaking && !ringing && !asking) ytDuck(false);
   }
 
   /* ================= keep awake + controls ================= */
@@ -2164,7 +2195,7 @@
   wake();
 
   // Hooks used for testing.
-  window.__hd = { moonPhase, controlDisplay, calendarText: async text => { await needIcal(); calText = text; calExpand(); calState = 'ok'; renderCalendar(); }, run, heard, local, parseDuration, parseClock, extractAlbum, eventsFromIcs, state: () => ({ lists, clocks, events, photos: photos.length,
+  window.__hd = { moonPhase, controlDisplay, heardInterim, chimes: () => chimes, calendarText: async text => { await needIcal(); calText = text; calExpand(); calState = 'ok'; renderCalendar(); }, run, heard, local, parseDuration, parseClock, extractAlbum, eventsFromIcs, state: () => ({ lists, clocks, events, photos: photos.length,
     music: { open: !!yt.frame, hidden: !!cfg.musicHidden, radio: radio.on, radioTitle: radio.title, radioSrc: radio.audio ? radio.audio.getAttribute('src') || '' : '', radioVolume: radio.audio ? radio.audio.volume : null, src: yt.frame ? yt.frame.src : '', title: yt.title, vol: yt.vol, ducked: yt.ducked, sent: yt.log.slice() } }) };
 })();
 </script>

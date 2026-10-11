@@ -1520,10 +1520,10 @@
     $('#ytTitle').textContent = yt.title || 'YouTube';
     $('#ytBy').textContent = yt.by || '';
     $('#ytPlay').textContent = playing ? '⏸' : '▶'; $('#ytPlay').title = playing ? 'Pause' : 'Play';
-    $('#player h2').textContent = yt.state === 0 ? 'Finished' : playing ? 'Now playing' : yt.state === 2 ? 'Paused' : 'Music';
+    $('#player h2').textContent = (yt.state === 0 ? 'Finished' : playing ? 'Now playing' : yt.state === 2 ? 'Paused' : 'Music') + (yt.album ? ' · ' + yt.album : '');
   }
-  function ytStart(list){
-    radioStop(true); ytStop(true);
+  function ytStart(list, album){
+    radioStop(true); ytStop(true); yt.album = album || '';
     yt.ready = false; yt.state = -1; yt.title = list[0].title; yt.by = list[0].by;
     const f = document.createElement('iframe');
     f.title = 'YouTube player';
@@ -1581,8 +1581,49 @@
   $('#ytClose').addEventListener('click', musicStop);
   $('#ytOpen').addEventListener('click', () => { if (cfg.radio) window.open(new URL(cfg.radio, location.href).href, '_blank', 'noopener'); });
   // "play …": the on-screen player when a YouTube key is set, otherwise a YouTube Music window.
-  async function playMusic(q){
+  /* Albums. YouTube Music's search page, fetched through the helper like the Photos album, labels results as
+     songs, albums and videos, and gives each album's playlist (OLAK5uy_…). The track list then comes from the
+     official YouTube Data API in album order, so the player starts at track 1 and plays straight through. */
+  function jsString(s){   // a single-quoted JavaScript string literal from the page, decoded
+    return s.replace(/\\(x[0-9a-fA-F]{2}|u[0-9a-fA-F]{4}|.)/g, (m, e) =>
+      e[0] === 'x' || e[0] === 'u' ? String.fromCharCode(parseInt(e.slice(1), 16)) : ({ n: '\n', r: '\r', t: '\t', b: '\b', f: '\f', v: '\v', '0': '\0' })[e] || e);
+  }
+  function ytmAlbums(html){
+    const m = html.match(/initialData\.push\(\{path: '\\\/search', params: JSON\.parse\('(?:[^'\\]|\\.)*'\), data: '((?:[^'\\]|\\.)*)'\}\)/);
+    if (!m) return [];
+    const data = JSON.parse(jsString(m[1])), out = [];
+    (function walk(o){
+      if (!o || typeof o !== 'object') return;
+      const r = o.musicResponsiveListItemRenderer || o.musicCardShelfRenderer;
+      if (r){
+        const s = JSON.stringify(r), id = (s.match(/OLAK5uy_[A-Za-z0-9_-]+/) || [])[0];
+        const texts = [...s.matchAll(/"text":"((?:[^"\\]|\\.)*)"/g)].map(x => JSON.parse('"' + x[1] + '"')).filter(x => x.trim() && x.trim() !== '•');
+        const type = texts.find(x => /^(Album|EP|Single)$/.test(x));
+        if (id && type && !out.some(a => a.id === id)) out.push({ id, title: texts[0], type, artist: texts[texts.indexOf(type) + 1] || '' });
+      }
+      for (const k in o) walk(o[k]);
+    })(data);
+    return out;
+  }
+  async function playAlbum(q){
+    pill('Finding the album ' + q + '…', 5000);
+    const albums = ytmAlbums(await relayText('https://music.youtube.com/search?q=' + encodeURIComponent(q), t => t.includes('initialData')));
+    const album = albums.find(a => a.type === 'Album') || albums[0];
+    if (!album) return null;
+    const res = await fetch('https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=50&playlistId=' + encodeURIComponent(album.id) + '&key=' + encodeURIComponent(cfg.ytKey));
+    if (!res.ok) throw new Error(res.status === 403 ? 'YouTube refused the album lookup. Check the key in Settings.' : 'YouTube album lookup failed (' + res.status + ').');
+    const tracks = ((await res.json()).items || []).map(x => x.snippet).filter(s => s && s.resourceId && s.resourceId.videoId && !/^(Deleted|Private) video$/.test(s.title))
+      .sort((a, b) => a.position - b.position).map(s => ({ id: s.resourceId.videoId, title: decodeEntities(s.title), by: album.artist }));
+    if (!tracks.length) return null;
+    ytStart(tracks, album.title); pill('Playing the album ' + album.title, 4000);
+    return 'Playing the album "' + album.title + '" by ' + album.artist + ' from track 1 (' + tracks.length + ' tracks), starting with "' + tracks[0].title + '".';
+  }
+  async function playMusic(q, kind){
     q = String(q || '').trim(); if (!q) return 'Nothing to search for.';
+    if (kind === 'album' && cfg.ytKey){
+      try{ const r = await playAlbum(q); if (r) return r; pill('No album found for "' + q + '"; playing songs instead', 4000); }
+      catch(e){ toast(e.message + ' Playing songs instead.', 8000); }
+    }
     if (!cfg.ytKey) return music(q) ? 'Opened a YouTube Music search in a side window; the user may need to click a result.' : 'The browser blocked the music window.';
     pill('Finding ' + q + '…', 4000);
     try{
@@ -1619,6 +1660,9 @@
       if (/^(?:turn (?:it|the music|this) up|turn up the (?:music|volume)|volume up|louder)$/.test(cmd)){ ytVolume(20); return true; }
       if (/^(?:turn (?:it|the music|this) down|turn down the (?:music|volume)|volume down|quieter|softer)$/.test(cmd)){ ytVolume(-20); return true; }
     }
+    if ((m = cmd.match(/^(?:play|put on)\s+(?:the |an? )?(?:album|record|lp) (?!(?:that|which|with|by|from|where)\b)(.+)$/)) && cfg.ytKey){ playMusic(m[1], 'album'); return true; }
+    // Anything more than a plain song or artist ("the whole album with…", "something like…") needs Claude to work it out first.
+    if (/^(?:play|put on)\b/.test(cmd) && cfg.key && /\b(albums?|records?|lp|ep|whole|entire|full|that|which|with|includes?|including|from|similar|like|something|anything|playlist|mix|songs|music|mood|vibe|discography|track ?list)\b/.test(cmd)) return false;
     if ((m = cmd.match(/^(?:play|put on)\s+(.+)$/))){
       playMusic(m[1].replace(/\s+on (youtube music|youtube|you tube music)$/, '').replace(/^(some|the song)\s+/, '')); return true;
     }
@@ -1813,6 +1857,7 @@
     'You help the user run their day and keep their projects moving. Use the tools to manage their lists (one list per project works well, plus To-do and Shopping), set timers and alarms, play and control music, and change what the display shows: ' +
     'the weather detail (all cards, without the 16-day forecast, or just today, sun and moon), the calendar (show, hide, day, week or month view), news, lists and the photo slideshow. ' +
     'Words like clear, hide, remove or close about a panel or forecast mean hide it from view; nothing is deleted. ' +
+    'For music, work out what they mean before calling play_music. If they want an album, or the album that has a certain song on it, decide which album and artist that is and call play_music with kind album and the album title and artist, so it plays from the first track straight through; if you are not sure which album, ask. For a mood or genre, choose a fitting search. ' +
     'When they talk through a project, offer to capture next steps on that project\'s list. ' +
     'You can see only what is in this prompt and conversation. You cannot see their email, files or other Claude conversations, you cannot browse the web, and you cannot change their calendar. If asked for something you cannot do here, say so briefly. ' +
     'Never claim an action happened unless a tool call succeeded.';
@@ -1829,8 +1874,9 @@
       input_schema: { type: 'object', properties: { which: { type: 'string', enum: ['timers', 'alarms', 'all'] } }, required: ['which'] } },
     { name: 'play_jams', description: 'Play the user\'s own radio (Endless Jam) in the Music card on the display, replacing anything playing there. Use when they ask for "jams" or their radio rather than a specific song or artist.',
       input_schema: { type: 'object', properties: {} } },
-    { name: 'play_music', description: 'Play a song, artist, album or mood. It plays in the player on the display and queues similar results (or opens a YouTube Music window if no YouTube key is set).',
-      input_schema: { type: 'object', properties: { query: { type: 'string', description: 'What to search for, e.g. "Khruangbin August 10" or "calm jazz piano"' } }, required: ['query'] } },
+    { name: 'play_music', description: 'Play music in the player on the display. kind "album" plays a whole album from track 1 in order: give the album title and artist as the query, not a song title. kind "song" (the default) plays the best match and queues similar results; use it for a song, an artist, or a mood or genre.',
+      input_schema: { type: 'object', properties: { query: { type: 'string', description: 'For an album: "<album title> <artist>", e.g. "Reinventing Axl Rose Against Me!". For a song: "<title> <artist>". For a mood: a short search like "calm jazz piano".' },
+        kind: { type: 'string', enum: ['song', 'album'] } }, required: ['query'] } },
     { name: 'control_display', description: 'Change what the display shows. These only change the view; nothing is deleted. weather_hide and weather_show turn all the weather off or on (like the Weather button). The weather has five cards: today, sun (sunrise and sunset), moon, next hours, and the 16-day forecast. weather_all shows all of them; the weather_hide_ actions hide one; weather_today_only leaves today, sun and moon.',
       input_schema: { type: 'object', properties: { action: { type: 'string', enum: ['weather_hide', 'weather_show', 'weather_all', 'weather_hide_16_day', 'weather_hide_hourly', 'weather_hide_today', 'weather_hide_sun', 'weather_hide_moon', 'weather_today_only', 'calendar_show', 'calendar_hide', 'calendar_day', 'calendar_week', 'calendar_month', 'news_show', 'news_hide', 'lists_show', 'lists_hide', 'photos_next', 'photos_previous', 'photos_pause', 'photos_resume'] } }, required: ['action'] } },
     { name: 'music_control', description: 'Control the music already playing on the display.',
@@ -1857,7 +1903,7 @@
       }
       if (name === 'cancel'){ const n = cancelClocks(input.which === 'timers' ? 'timer' : input.which === 'alarms' ? 'alarm' : ''); return 'Cancelled ' + n + '.'; }
       if (name === 'play_jams'){ jams(); return 'Started the radio in the Music card.'; }
-      if (name === 'play_music') return await playMusic(input.query);
+      if (name === 'play_music') return await playMusic(input.query, input.kind);
       if (name === 'control_display') return controlDisplay(String(input.action || ''));
       if (name === 'music_control'){
         if (!musicOn()) return 'No music is playing on the display.';
@@ -2198,7 +2244,7 @@
   wake();
 
   // Hooks used for testing.
-  window.__hd = { moonPhase, controlDisplay, heardInterim, chimes: () => chimes, calendarText: async text => { await needIcal(); calText = text; calExpand(); calState = 'ok'; renderCalendar(); }, run, heard, local, parseDuration, parseClock, extractAlbum, eventsFromIcs, state: () => ({ lists, clocks, events, photos: photos.length,
+  window.__hd = { ytmAlbums, moonPhase, controlDisplay, heardInterim, chimes: () => chimes, calendarText: async text => { await needIcal(); calText = text; calExpand(); calState = 'ok'; renderCalendar(); }, run, heard, local, parseDuration, parseClock, extractAlbum, eventsFromIcs, state: () => ({ lists, clocks, events, photos: photos.length,
     music: { open: !!yt.frame, hidden: !!cfg.musicHidden, radio: radio.on, radioTitle: radio.title, radioSrc: radio.audio ? radio.audio.getAttribute('src') || '' : '', radioVolume: radio.audio ? radio.audio.volume : null, src: yt.frame ? yt.frame.src : '', title: yt.title, vol: yt.vol, ducked: yt.ducked, sent: yt.log.slice() } }) };
 })();
 </script>

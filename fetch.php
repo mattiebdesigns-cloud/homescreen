@@ -10,6 +10,7 @@ const ALLOWED_HOSTS = [
     'photos.google.com',
     'news.google.com',
     'calendar.google.com',
+    'music.youtube.com',          // album lookup: YouTube Music's search page, read like the Photos album
     'endless-jam.onrender.com',   // the owner's radio: track info only (it only answers cedarwater.net itself)
 ];
 const MAX_BYTES = 12 * 1024 * 1024;

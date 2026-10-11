@@ -1425,8 +1425,11 @@
         : 'YouTube search failed (' + res.status + ').');
     }
     const d = await res.json();
+    // "Artist - Topic" uploads are the album tracks YouTube Music itself plays, so they go first;
+    // everything else keeps YouTube's order after them.
     return (d.items || []).filter(x => x.id && x.id.videoId && x.snippet).map(x => ({
-      id: x.id.videoId, title: decodeEntities(x.snippet.title), by: decodeEntities(x.snippet.channelTitle).replace(/ - Topic$/, '') }));
+      id: x.id.videoId, title: decodeEntities(x.snippet.title), topic: / - Topic$/.test(x.snippet.channelTitle || ''),
+      by: decodeEntities(x.snippet.channelTitle).replace(/ - Topic$/, '') })).sort((a, b) => b.topic - a.topic);
   }
   /* ================= radio (Endless Jam) in the Music card =================
      The radio's server only answers cedarwater.net, so track info comes through this site's helper;

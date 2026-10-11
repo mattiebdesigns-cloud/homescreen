@@ -7,6 +7,11 @@ window.fetch=async (url, opts)=>{
   url=String(url);
   if (url.startsWith('https://www.googleapis.com/youtube/v3/search')){
     searches.push(url);
+    if (/q=topictest/.test(url)) return new Response(JSON.stringify({items:[
+      {id:{videoId:'mv1'},snippet:{title:'Song (Official Video)',channelTitle:'ArtistVEVO'}},
+      {id:{videoId:'tp1'},snippet:{title:'Song',channelTitle:'Artist - Topic'}},
+      {id:{videoId:'live1'},snippet:{title:'Song (Live)',channelTitle:'KEXP'}},
+      {id:{videoId:'tp2'},snippet:{title:'Other Song',channelTitle:'Artist - Topic'}}]}),{status:200});
     if (/q=broken/.test(url)) return new Response(JSON.stringify({error:{message:'API key not valid. Please pass a valid API key.',errors:[{reason:'badRequest'}]}}),{status:400});
     return new Response(JSON.stringify({items:[
       {id:{videoId:'vid1'},snippet:{title:'Khruangbin &amp; Leon Bridges - Texas Sun',channelTitle:'Khruangbin - Topic'}},
@@ -39,6 +44,9 @@ out.push((claude.length===2 && claude[1].messages.at(-1).content[0].content==='D
 out.push((/Music player: .*Texas Sun/.test(claude[0].system)?'PASS':'FAIL')+' Claude sees what is playing');
 h.local('stop the music'); out.push((!M().open && !document.querySelector('#player').classList.contains('show')?'PASS':'FAIL')+' "stop the music" closes the player');
 const before=M().sent.length; h.local('next'); out.push((M().sent.length===before?'PASS':'FAIL')+' "next" goes back to photos once music is closed');
+h.run('play topictest'); await wait(800);
+out.push((/\/embed\/tp1\?/.test(M().src) && /playlist=tp2,mv1,live1/.test(M().src) && document.querySelector('#ytBy').textContent==='Artist'?'PASS':'FAIL')+' YouTube Music album tracks (Topic) play first, others after in order: '+(M().src.match(/embed\/(\w+)/)||[])[1]+' then '+(M().src.match(/playlist=([\w,]+)/)||[])[1]);
+h.local('stop the music');
 h.run('play broken'); await wait(800);
 out.push((/not accepted/.test(document.querySelector('#toast').textContent) && opened.some(u=>/music\.youtube\.com\/search\?q=broken/.test(u))?'PASS':'FAIL')+' bad key: explains and falls back to a YouTube Music window');
 localStorage.setItem('hd_ytKey','""');

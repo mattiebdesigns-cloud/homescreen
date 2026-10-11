@@ -171,7 +171,15 @@
   /* Hidden by moving it off-screen, not display:none: Chrome slows down hidden frames from other sites,
      which could stall YouTube. The music keeps playing. */
   #player.show.hidden{position:fixed;left:-10000px;top:0;width:320px;opacity:0;pointer-events:none}
-  #player.radio .np{padding:6px 0 2px}
+  #player.radio .np{padding:6px 0 2px;flex:1 0 100%}
+  #player.radio .now{flex-wrap:wrap;justify-content:flex-end;row-gap:8px}
+  /* Endless Jam's scrolling "now playing" bar, like the top of the radio site */
+  #ytTitle .mq{display:inline-flex;animation:mq var(--mqdur,20s) linear infinite;color:#a8d77a;letter-spacing:.06em;font-size:.86em;text-overflow:clip}
+  #ytTitle .mq span{white-space:pre;padding-right:0}
+  #ytTitle.marq{text-overflow:clip;-webkit-mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent);mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent)}
+  #ytTitle.marq.stopped .mq{animation-play-state:paused}
+  @keyframes mq{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+  @media (prefers-reduced-motion:reduce){ #ytTitle .mq{animation:none} #ytTitle.marq{text-overflow:ellipsis;-webkit-mask-image:none;mask-image:none} }
   #ytOpen{display:none}
   #player.radio #ytOpen{display:inline-block}
 
@@ -1387,7 +1395,7 @@
      The radio's server only answers cedarwater.net, so track info comes through this site's helper;
      the audio itself plays straight from the radio's server in a plain audio element. */
   const RADIO_API = 'https://endless-jam.onrender.com';
-  const radio = { on: false, audio: null, title: '', date: '', tries: 0, errors: 0, timer: null };
+  const radio = { on: false, audio: null, title: '', date: '', track: false, tries: 0, errors: 0, timer: null };
   function radioAudio(){
     if (radio.audio) return radio.audio;
     const a = radio.audio = new Audio(); a.preload = 'auto';
@@ -1396,7 +1404,7 @@
       if (!radio.on || !a.getAttribute('src')) return;
       // A track that will not play: try the next one, but stop after three failures in a row.
       if (++radio.errors < 3) radio.timer = setTimeout(radioNext, 3000);
-      else { radio.errors = 0; radio.title = 'The radio is not playing right now'; ytRender(); toast('The radio could not play its tracks. Try again in a minute.', 8000); }
+      else { radio.errors = 0; radio.track = false; radio.title = 'The radio is not playing right now'; ytRender(); toast('The radio could not play its tracks. Try again in a minute.', 8000); }
     });
     a.addEventListener('playing', () => { radio.errors = 0; });
     ['play', 'pause', 'playing'].forEach(ev => a.addEventListener(ev, () => { if (radio.on) ytRender(); }));
@@ -1405,19 +1413,19 @@
   async function radioNext(){
     clearTimeout(radio.timer);
     if (!radio.on) return;
-    radio.title = radio.tries ? 'Waking up the radio…' : 'Loading…'; radio.date = ''; ytRender();
+    radio.title = radio.tries ? 'Waking up the radio…' : 'Loading…'; radio.date = ''; radio.track = false; ytRender();
     try{
       const d = JSON.parse(await relayText(RADIO_API + '/api/now-playing', t => /"stream_url"/.test(t)));
       if (!radio.on) return;
       if (!/^\/api\/stream\/[A-Za-z0-9_-]+$/.test(String(d.stream_url || ''))) throw new Error('no track');
-      radio.title = String(d.display_name || d.name || 'Endless Jam'); radio.date = String(d.date_hint || ''); radio.tries = 0;
+      radio.title = String(d.display_name || d.name || 'Endless Jam'); radio.date = String(d.date_hint || ''); radio.track = true; radio.tries = 0;
       const a = radioAudio(); a.src = RADIO_API + d.stream_url; applyVolume();
       a.play().catch(() => { if (cfg.musicHidden) setMusicHidden(false); pill('Tap ▶ on the Music card to start the radio', 6000); });
     }catch(e){
       if (!radio.on) return;
       // The radio's server sleeps when idle and takes up to a minute to wake.
       if (++radio.tries <= 4){ radio.timer = setTimeout(radioNext, [2000, 8000, 15000, 25000][radio.tries - 1]); }
-      else { radio.title = 'The radio is not answering'; radio.tries = 0; toast('The radio is not answering right now. Try again in a minute.', 8000); }
+      else { radio.title = 'The radio is not answering'; radio.track = false; radio.tries = 0; toast('The radio is not answering right now. Try again in a minute.', 8000); }
     }
     ytRender();
   }
@@ -1449,11 +1457,26 @@
     if (radio.on){
       const a = radio.audio, playing = !!a && !a.paused;
       $('#player h2').textContent = 'Endless Jam' + (a && a.paused && a.getAttribute('src') ? ' · Paused' : '');
-      $('#ytTitle').textContent = radio.title; $('#ytBy').textContent = radio.date ? 'Recorded ' + radio.date : '';
+      const title = $('#ytTitle');
+      if (radio.track){
+        const text = '★  ENDLESS JAM  ★  NOW PLAYING: ' + radio.title.toUpperCase() + (radio.date ? '  ★  RECORDED: (' + radio.date + ')' : '') + '  ★  ';
+        if (title.dataset.mq !== text){         // rebuild only when the track changes, so the scroll does not restart
+          title.dataset.mq = text; title.textContent = ''; title.classList.add('marq');
+          const mq = el('span', 'mq'); mq.appendChild(el('span', '', text)); mq.appendChild(el('span', '', text));   // two copies loop seamlessly
+          mq.style.setProperty('--mqdur', Math.max(10, Math.round(text.length * 0.22)) + 's');
+          title.appendChild(mq); title.title = radio.title + (radio.date ? ' (' + radio.date + ')' : '');
+        }
+        title.classList.toggle('stopped', !playing);
+        $('#ytBy').textContent = '';
+      } else {
+        title.classList.remove('marq', 'stopped'); delete title.dataset.mq; title.title = '';
+        title.textContent = radio.title; $('#ytBy').textContent = '';
+      }
       $('#ytPlay').textContent = playing ? '⏸' : '▶'; $('#ytPlay').title = playing ? 'Pause' : 'Play';
       return;
     }
     const playing = ytPlaying();
+    $('#ytTitle').classList.remove('marq', 'stopped'); delete $('#ytTitle').dataset.mq; $('#ytTitle').title = '';
     $('#ytTitle').textContent = yt.title || 'YouTube';
     $('#ytBy').textContent = yt.by || '';
     $('#ytPlay').textContent = playing ? '⏸' : '▶'; $('#ytPlay').title = playing ? 'Pause' : 'Play';

@@ -21,7 +21,7 @@ Live: [hub.cedarwater.net](https://hub.cedarwater.net) (it opens with a setup gu
 - **Lists, timers and alarms** handled on the page itself by voice or typing: "add oat milk to my shopping list", "set a pasta timer for 8 minutes", "wake me up at half past 6".
 - **Claude assistant** for anything else. It sees what is on the display (weather, calendar, lists, timers, an optional project status file) and can act on it through tools: add to or update lists, set timers and alarms, play music. Replies are spoken with the most natural voice installed on the device.
 - **Voice** with a wake word ("hey Claude") through Chrome's speech recognition, tolerant of the usual mishearings ("hey cloud", "hey clyde").
-- **Music player** on the screen: "play Khruangbin" searches YouTube (Data API, embeddable music only), plays the top result and queues the rest. Pause, next, volume and stop by voice, by button or through Claude; the music ducks while Claude talks or an alarm rings. The player is driven with postMessage, so no YouTube script runs in the page. Without a YouTube key, songs open in a YouTube Music window. "Put on some jams" opens a radio page.
+- **Music player** on the screen: "play Khruangbin" searches YouTube (Data API, embeddable music only), plays the top result and queues the rest. Pause, next, volume and stop by voice, by button or through Claude; the music ducks while Claude talks or an alarm rings. The player is driven with postMessage, so no YouTube script runs in the page. Without a YouTube key, songs open in a YouTube Music window. "Put on some jams" plays the author's radio (Endless Jam) in the same card, replacing whatever was playing, with the same controls; its track info comes through `fetch.php` because the radio's server only answers its own site.
 - **Phone friendly**: upright and sideways layouts, installable to the home screen, keeps the screen awake where the browser allows.
 
 ## How it works
@@ -36,7 +36,7 @@ browser ──► index.html ──────────────► api.a
 ```
 
 - **`index.html`** is the whole app: HTML, CSS and one script. Settings, lists and timers live in `localStorage`.
-- **`fetch.php`** exists because browsers cannot read Google's album pages, RSS or iCal feeds from another site. It answers only same-origin requests (checked with `Sec-Fetch-Site`, falling back to `Origin`/`Referer`), accepts GET only, fetches only `https` URLs on four Google hosts, follows redirects by hand so every hop is re-checked, caps responses at 12 MB, and stores nothing.
+- **`fetch.php`** exists because browsers cannot read Google's album pages, RSS or iCal feeds from another site. It answers only same-origin requests (checked with `Sec-Fetch-Site`, falling back to `Origin`/`Referer`), accepts GET only, fetches only `https` URLs on four Google hosts and the radio's server, follows redirects by hand so every hop is re-checked, caps responses at 12 MB, and stores nothing.
 - **Claude** is called straight from the browser with the user's key (`anthropic-dangerous-direct-browser-access`). The page runs a small tool-use loop (up to 5 rounds) with seven tools and a snapshot of the display taken once per question.
 
 ## Security and privacy
@@ -69,7 +69,7 @@ browser ──► index.html ──────────────► api.a
 tests/run.sh
 ```
 
-Runs 76 checks in headless Google Chrome against the real `index.html`: duration and clock-time parsing, local commands, wake-word matching, album and iCal parsing, ringing several timers at once, the Claude tool loop (with the API faked), the photo screen, API-key cleaning, the calendar toggle and the music player. No accounts or keys are needed. The page exposes `window.__hd` (`run`, `heard`, `local`, `parseDuration`, `parseClock`, `extractAlbum`, `eventsFromIcs`, `state`) for driving it without a microphone.
+Runs 89 checks in headless Google Chrome against the real `index.html`: duration and clock-time parsing, local commands, wake-word matching, album and iCal parsing, ringing several timers at once, the Claude tool loop (with the API faked), the photo screen, API-key cleaning, the calendar toggle, the music player and the radio. No accounts or keys are needed. The page exposes `window.__hd` (`run`, `heard`, `local`, `parseDuration`, `parseClock`, `extractAlbum`, `eventsFromIcs`, `state`) for driving it without a microphone.
 
 ## History
 

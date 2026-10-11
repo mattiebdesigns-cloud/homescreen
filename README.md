@@ -15,8 +15,8 @@ Live: [hub.cedarwater.net](https://hub.cedarwater.net) (it opens with a setup gu
 ## Features
 
 - **Photos** from a Google Photos shared album (or a folder on the Mac), cross-fading with a slow drift. New photos added to the album appear on their own. Swipe on a phone to change photos.
-- **Clock and weather** from Open-Meteo: now, the next 8 hours and 3 days. Tap the weather to step through all of it, hourly only, or current only.
-- **Calendar** from Google Calendar's secret iCal address, today and tomorrow, with recurring events, all-day events and cancelled instances handled by ical.js.
+- **Clock and weather** from Open-Meteo as small cards: today (feels-like, wind, humidity), sunrise and sunset with hours of daylight, the moon drawn at its current phase (calculated on the device), the next 8 hours, and a 16-day forecast. Tap the weather to step through all of it, without the 16 days, or just today, sun and moon; on shorter screens the longer forecasts step aside on their own.
+- **Calendar** from Google Calendar's secret iCal address, with a Day / Week / Month switch (a month grid with dots on busy days and what's coming up). Recurring events, all-day events and cancelled instances are handled by ical.js.
 - **News** from Google News RSS, shown automatically in the morning, with an optional topic.
 - **Lists, timers and alarms** handled on the page itself by voice or typing: "add oat milk to my shopping list", "set a pasta timer for 8 minutes", "wake me up at half past 6".
 - **Claude assistant** for anything else. It sees what is on the display (weather, calendar, lists, timers, an optional project status file) and can act on it through tools: add to or update lists, set timers and alarms, play music. Replies are spoken with the most natural voice installed on the device.

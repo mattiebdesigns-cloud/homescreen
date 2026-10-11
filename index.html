@@ -42,26 +42,42 @@
 
   /* ---------- clock + weather ---------- */
   #corner{position:fixed;left:4vw;bottom:5vh;text-shadow:0 2px 24px rgba(0,0,0,.55)}
-  #time{font-size:clamp(64px,10vw,150px);font-weight:200;letter-spacing:-.035em;line-height:.95;
+  #time{font-size:clamp(56px,min(10vw,15vh),150px);font-weight:200;letter-spacing:-.035em;line-height:.95;
     font-variant-numeric:tabular-nums}
   #time small{font-size:.28em;font-weight:400;letter-spacing:.04em;margin-left:.3em;color:var(--dim)}
   #date{font-size:clamp(18px,2vw,30px);font-weight:500;margin-top:.5em;color:var(--dim)}
-  #weather{display:none;margin-top:1.1em;color:var(--ink);cursor:pointer;-webkit-user-select:none;user-select:none;
-    font-size:clamp(16px,1.5vw,23px)}
-  #weather.ready{display:inline-block}
-  .wxTop{display:flex;align-items:center;gap:1.1em}
-  #wxHours{display:flex;gap:1.05em;margin-top:.75em;padding-top:.7em;border-top:1px solid var(--line);overflow:hidden}
-  .wxHour{text-align:center;font-size:.74em;color:var(--dim);line-height:1.35;flex:0 0 auto}
-  .wxHour span{display:block;font-size:1.45em}
-  .wxHour i{display:block;font-style:normal;font-size:.85em;color:#8fc7ff}
-  /* tap cycles: everything → no 3-day → current only → everything */
-  #weather.noDays #wxDays,#weather.nowOnly #wxDays,#weather.nowOnly #wxHours{display:none}
-  #wxNow{display:flex;align-items:center;gap:.4em;font-size:1.7em;font-weight:300}
+  #weather{display:none;margin-top:1.1em;color:var(--ink);cursor:pointer;-webkit-user-select:none;user-select:none;text-shadow:none;
+    font-size:clamp(14px,1.25vw,19px)}
+  #weather.ready{display:flex;flex-direction:column;align-items:flex-start;gap:10px}
+  .wxRow{display:flex;gap:10px;align-items:stretch}
+  .wxCard{background:var(--glass);border:1px solid var(--line);border-radius:16px;padding:10px 14px 11px;
+    backdrop-filter:blur(22px) saturate(1.2);-webkit-backdrop-filter:blur(22px) saturate(1.2)}
+  .wxLbl{font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin-bottom:6px}
+  #wxHours{display:flex;gap:1.05em;overflow:hidden}
+  .wxHour{text-align:center;font-size:.8em;color:var(--dim);line-height:1.35;flex:0 0 auto}
+  .wxHour span{display:block;font-size:1.4em}
+  .wxHour i,.wxDay i{display:block;font-style:normal;font-size:.85em;color:#8fc7ff}
+  #wxDays{display:grid;grid-template-columns:repeat(8,minmax(3.1em,1fr));gap:10px 8px}
+  .wxDay{text-align:center;font-size:.76em;color:var(--dim);line-height:1.3}
+  .wxDay b{display:block;color:var(--ink);font-weight:600}
+  .wxDay small{display:block;font-size:.85em;color:var(--faint)}
+  .wxDay span{display:block;font-size:1.45em;margin:2px 0}
+  .wxDay em{font-style:normal;color:var(--ink)}
+  #wxSunBody{font-size:.88em;line-height:1.6;color:var(--dim);white-space:nowrap}
+  #wxSunBody b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+  #wxSunBody small{display:block;font-size:.85em;color:var(--faint);line-height:1.3;margin-top:2px}
+  #wxMoon{text-align:center}
+  #wxMoonBody svg{width:3.4em;height:3.4em;display:block;margin:0 auto;filter:drop-shadow(0 0 10px rgba(241,236,224,.28))}
+  #wxMoonBody small{display:block;font-size:.72em;color:var(--faint);margin-top:4px;white-space:nowrap}
+  /* tap cycles: everything → no 16-day → today, sun and moon only → everything */
+  #weather.noDays #wxLong,#weather.nowOnly #wxLong,#weather.nowOnly #wxHourly{display:none}
+  /* set by fitCorner() when the screen is too short for everything */
+  #weather.fitDays #wxLong,#weather.fitHours #wxHourly{display:none}
+  #wxNow{display:flex;align-items:center;gap:.35em;font-size:2em;font-weight:300;line-height:1.1}
   #wxText{line-height:1.35;color:var(--dim)}
   #wxText b{color:var(--ink);font-weight:600}
-  #wxDays{display:flex;gap:1em;padding-left:1.1em;border-left:1px solid var(--line)}
-  .wxDay{text-align:center;font-size:.78em;color:var(--dim);line-height:1.4}
-  .wxDay span{display:block;font-size:1.5em}
+  #wxText{font-size:.86em;margin-top:4px}
+  #wxText small{display:block;color:var(--faint);font-size:.9em;margin-top:2px}
 
   /* ---------- timers + alarms ---------- */
   #leftTop{position:fixed;left:4vw;top:3.4vh;width:min(540px,44vw);display:flex;flex-direction:column;gap:14px;z-index:5}
@@ -116,6 +132,20 @@
   #calList .what{font-weight:500;line-height:1.3;min-width:0;overflow-wrap:anywhere}
   #calList li.day{border-top:0;padding:8px 0 2px;font-size:12px;color:var(--faint);letter-spacing:.08em;text-transform:uppercase}
   #calList li.now .what{color:var(--accent)}
+  .cardHead{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .seg{display:flex;background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:999px;padding:2px}
+  .seg button{background:none;border:0;border-radius:999px;padding:3px 10px;font-size:11px;font-weight:600;color:var(--dim);letter-spacing:.02em}
+  .seg button[aria-pressed="true"]{background:rgba(255,255,255,.16);color:var(--ink)}
+  #calList li .wd{color:var(--faint);font-size:.8em;margin-right:6px}
+  .mgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin:4px 0 6px;text-align:center;font-variant-numeric:tabular-nums}
+  .mgrid .dow{font-size:10px;color:var(--faint);letter-spacing:.08em;padding:2px 0 4px}
+  .mgrid .d{font-size:clamp(12px,.95vw,15px);padding:5px 0 7px;border-radius:9px;position:relative;line-height:1.1}
+  .mgrid .d.other{color:var(--faint);opacity:.45}
+  .mgrid .d.past{color:var(--faint)}
+  .mgrid .d.today{background:var(--accent);color:#14161a;font-weight:700}
+  .mgrid .d .dots{position:absolute;left:0;right:0;bottom:2px;display:flex;justify-content:center;gap:2px}
+  .mgrid .d .dots i{width:4px;height:4px;border-radius:50%;background:var(--accent)}
+  .mgrid .d.today .dots i{background:#14161a}
   .listName{font-size:12px;color:var(--faint);letter-spacing:.08em;text-transform:uppercase;padding:8px 0 2px}
   #listBody li{display:flex;gap:10px;align-items:baseline;font-size:clamp(14px,1.15vw,18px);cursor:pointer;padding:8px 0}
   #listBody li::before{content:"";flex:0 0 14px;height:14px;border:1.5px solid var(--dim);border-radius:50%;transform:translateY(2px)}
@@ -243,9 +273,11 @@
     #corner{left:max(6vw,env(safe-area-inset-left));right:6vw;bottom:calc(env(safe-area-inset-bottom) + 3vh)}
     #time{font-size:21vw}
     #date{font-size:18px}
-    #weather{font-size:15px}
-    .wxTop{flex-wrap:wrap;gap:.5em 1.1em}
-    #wxDays{border-left:0;padding-left:0}
+    #weather{font-size:13px}
+    .wxRow{width:100%}
+    .wxRow .wxCard{flex:1 1 auto;padding:8px 10px}
+    #wxDays{grid-template-columns:repeat(8,minmax(0,1fr));gap:8px 2px}
+    .wxDay{font-size:.7em}
     .wxHour:nth-child(n+7){display:none}
   }
   /* phone on its side, e.g. in a dock */
@@ -253,8 +285,12 @@
     #corner{left:max(4vw,env(safe-area-inset-left));bottom:max(4vh,env(safe-area-inset-bottom))}
     #time{font-size:clamp(46px,16vh,92px)}
     #date{font-size:15px;margin-top:.3em}
-    #weather{font-size:12.5px;margin-top:.6em}
-    #wxHours{margin-top:.5em;padding-top:.5em}
+    #weather{font-size:12px;margin-top:.5em}
+    #weather.ready{gap:6px}
+    .wxCard{padding:6px 10px 7px;border-radius:12px}
+    .wxLbl{margin-bottom:3px}
+    /* not enough height on a phone on its side for the 16-day grid */
+    #wxLong{display:none}
     #leftTop{left:auto;right:max(3vw,env(safe-area-inset-right));top:calc(max(2vh,env(safe-area-inset-top)) + 46px);width:min(320px,36vw)}
     #side{right:max(3vw,env(safe-area-inset-right));top:calc(max(2vh,env(safe-area-inset-top)) + 96px);width:min(320px,36vw);transform:none;max-height:70vh}
     #cBubble{max-height:36vh;padding:12px 16px}
@@ -289,12 +325,14 @@
   <div id="time"></div>
   <div id="date"></div>
   <div id="weather" role="button" tabindex="0" title="Tap to show less or more">
-    <div class="wxTop">
-      <div id="wxNow"><span id="wxIcon"></span><span id="wxTemp"></span></div>
-      <div id="wxText"></div>
-      <div id="wxDays"></div>
+    <div class="wxRow">
+      <div class="wxCard" id="wxToday"><div class="wxLbl" id="wxPlace">Today</div>
+        <div id="wxNow"><span id="wxIcon"></span><span id="wxTemp"></span></div><div id="wxText"></div></div>
+      <div class="wxCard" id="wxSun"><div class="wxLbl">Sun</div><div id="wxSunBody"></div></div>
+      <div class="wxCard" id="wxMoon"><div class="wxLbl">Moon</div><div id="wxMoonBody"></div></div>
     </div>
-    <div id="wxHours"></div>
+    <div class="wxCard" id="wxHourly"><div class="wxLbl">Next hours</div><div id="wxHours"></div></div>
+    <div class="wxCard" id="wxLong"><div class="wxLbl" id="wxLongLbl">16 days</div><div id="wxDays"></div></div>
   </div>
 </div>
 
@@ -311,7 +349,8 @@
     </div>
   </section>
   <section class="card" id="cal" aria-label="Calendar">
-    <h2>Calendar</h2>
+    <div class="cardHead"><h2>Calendar</h2>
+      <div class="seg" id="calSeg" role="group" aria-label="Calendar view"><button type="button" data-v="day">Day</button><button type="button" data-v="week">Week</button><button type="button" data-v="month">Month</button></div></div>
     <div class="sub" id="calSub">Google Calendar</div>
     <ul class="rows" id="calList"></ul>
   </section>
@@ -472,6 +511,7 @@
       <li>“…put on some jams” (your radio page)</li>
       <li>“…show the news” / “hide the news”</li>
       <li>“…hide the calendar” / “show the calendar”</li>
+      <li>“…show my week” / “show the month” / “show today”</li>
       <li>“…next” / “pause” / “resume” (photos)</li>
       <li>“…what's left on my calendar today?”</li>
       <li>“…stop” (silences an alarm or Claude)</li>
@@ -547,6 +587,7 @@
     newsMode: store.get('newsMode', 'auto'),
     listsHidden: store.get('listsHidden', false),
     calHidden: store.get('calHidden', false),
+    calView:  ['day', 'week', 'month'].includes(store.get('calView', 'day')) ? store.get('calView', 'day') : 'day',
     musicHidden: store.get('musicHidden', false),
     topic:    store.get('topic', ''),
     wake:     store.get('wake', 'hey claude'),
@@ -773,26 +814,73 @@
   };
   const wx = (code, isDay) => { const w = WX[code] || ['—', '🌡️']; return { label: w[0], icon: (isDay === 0 && w[2]) ? w[2] : w[1] }; };
   let wxSummary = '';
+  // Moon phase from the mean synodic month, counted from a known new moon (2000-01-06 18:14 UTC); good to about half a day.
+  function moonPhase(date){
+    const syn = 29.530588853, days = (date - Date.UTC(2000, 0, 6, 18, 14)) / 864e5;
+    const p = (((days % syn) + syn) % syn) / syn;                 // 0 new, 0.5 full
+    const lit = (1 - Math.cos(2 * Math.PI * p)) / 2;
+    const names = ['New moon', 'Waxing crescent', 'First quarter', 'Waxing gibbous', 'Full moon', 'Waning gibbous', 'Last quarter', 'Waning crescent'];
+    return { p, lit, name: names[Math.floor(p * 8 + 0.5) % 8] };
+  }
+  // The lit part is a half disc plus or minus half an ellipse whose width follows the phase.
+  function moonSvg(p, south){
+    const ns = 'http://www.w3.org/2000/svg', r = 30, c = 32, k = Math.cos(2 * Math.PI * p), rx = Math.abs(k) * r, waxing = p < 0.5;
+    const mk = (tag, a) => { const n = document.createElementNS(ns, tag); for (const x in a) n.setAttribute(x, a[x]); return n; };
+    const svg = mk('svg', { viewBox: '0 0 64 64', role: 'img' });
+    const defs = mk('defs', {}), g = mk('radialGradient', { id: 'moonLit', cx: '40%', cy: '35%', r: '75%' });
+    g.appendChild(mk('stop', { offset: '0%', 'stop-color': '#fbf8f0' })); g.appendChild(mk('stop', { offset: '100%', 'stop-color': '#d9d2c2' }));
+    defs.appendChild(g); svg.appendChild(defs);
+    const grp = mk('g', south ? { transform: 'translate(64 0) scale(-1 1)' } : {});   // the southern hemisphere sees it mirrored
+    grp.appendChild(mk('circle', { cx: c, cy: c, r, fill: '#3a3f49', stroke: 'rgba(255,255,255,.22)', 'stroke-width': 1 }));
+    const sweep2 = waxing ? (k > 0 ? 0 : 1) : (k > 0 ? 1 : 0);
+    grp.appendChild(mk('path', { fill: 'url(#moonLit)',
+      d: 'M ' + c + ' ' + (c - r) + ' A ' + r + ' ' + r + ' 0 0 ' + (waxing ? 1 : 0) + ' ' + c + ' ' + (c + r) +
+         ' A ' + rx.toFixed(2) + ' ' + r + ' 0 0 ' + sweep2 + ' ' + c + ' ' + (c - r) + ' Z' }));
+    svg.appendChild(grp);
+    return svg;
+  }
+  function renderMoon(){
+    const m = moonPhase(new Date()), body = $('#wxMoonBody'), pct = Math.round(m.lit * 100);
+    body.textContent = '';
+    const svg = moonSvg(m.p, cfg.place && cfg.place.lat < 0); svg.setAttribute('aria-label', m.name + ', ' + pct + '% lit');
+    body.appendChild(svg); body.appendChild(el('small', '', m.name + ' · ' + pct + '%'));
+    return m;
+  }
+  const localTime = iso => fmtTime(new Date(iso));
   async function loadWeather(){
     const p = cfg.place;
     if (!p){ $('#weather').classList.remove('ready'); wxSummary = ''; return; }
+    const wind = cfg.unit === 'fahrenheit' ? 'mph' : 'kmh';
     const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + p.lat + '&longitude=' + p.lon +
-      '&current=temperature_2m,weather_code,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max' +
+      '&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code,is_day' +
+      '&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset,daylight_duration' +
       '&hourly=temperature_2m,weather_code,is_day,precipitation_probability' +
-      '&temperature_unit=' + cfg.unit + '&timezone=auto&forecast_days=4';
+      '&temperature_unit=' + cfg.unit + '&wind_speed_unit=' + wind + '&timezone=auto&forecast_days=16';
     try{
       const res = await fetch(url, { cache: 'no-store' });
       if (!res.ok) throw new Error('weather');
       const d = await res.json();
       const c = d.current, day = d.daily, now = wx(c.weather_code, c.is_day);
+      // Today
+      $('#wxPlace').textContent = 'Today · ' + p.name;
       $('#wxIcon').textContent = now.icon;
       $('#wxTemp').textContent = Math.round(c.temperature_2m) + '°';
       const text = $('#wxText'); text.textContent = '';
-      text.appendChild(el('b', '', now.label + ' in ' + p.name));
-      text.appendChild(document.createElement('br'));
       const rain = day.precipitation_probability_max[0];
       const line = 'High ' + Math.round(day.temperature_2m_max[0]) + '° · Low ' + Math.round(day.temperature_2m_min[0]) + '°' + (rain != null ? ' · Rain ' + rain + '%' : '');
+      text.appendChild(el('b', '', now.label)); text.appendChild(document.createElement('br'));
       text.appendChild(document.createTextNode(line));
+      const extra = ['Feels ' + Math.round(c.apparent_temperature) + '°', 'Wind ' + Math.round(c.wind_speed_10m) + (wind === 'mph' ? ' mph' : ' km/h'), 'Humidity ' + Math.round(c.relative_humidity_2m) + '%'].join(' · ');
+      text.appendChild(el('small', '', extra));
+      // Sun
+      const sun = $('#wxSunBody'); sun.textContent = '';
+      const dl = day.daylight_duration ? day.daylight_duration[0] : null;
+      [['🌅 ', day.sunrise[0]], ['🌇 ', day.sunset[0]]].forEach(([icon, iso]) => {
+        const r = el('div', '', icon); r.appendChild(el('b', '', localTime(iso))); sun.appendChild(r);
+      });
+      if (dl) sun.appendChild(el('small', '', Math.floor(dl / 3600) + ' h ' + Math.round(dl % 3600 / 60) + ' m of daylight'));
+      // Moon
+      const moon = renderMoon();
       // Next 8 hours, starting with the next full hour (times are local to the city).
       const hr = d.hourly, start = hr.time.findIndex(x => x > c.time), hours = $('#wxHours'); hours.textContent = '';
       const next = start < 0 ? [] : hr.time.slice(start, start + 8).map((x, j) => ({
@@ -806,17 +894,26 @@
         if (h.rain >= 30) n.appendChild(el('i', '', h.rain + '%'));
         hours.appendChild(n);
       });
-      wxSummary = now.label + ', ' + Math.round(c.temperature_2m) + '° now in ' + p.name + '. Today: ' + line +
-        (next.length ? '. Next hours: ' + next.map(h => h.label + ' ' + h.temp + '°' + (h.rain != null ? ' ' + h.rain + '% rain' : '')).join(', ') : '');
+      // Every day Open-Meteo gives (16), today first
       const days = $('#wxDays'); days.textContent = '';
-      for (let i = 1; i < Math.min(4, day.time.length); i++){
-        const n = el('div', 'wxDay');
-        n.appendChild(document.createTextNode(new Date(day.time[i] + 'T12:00:00').toLocaleDateString([], { weekday: 'short' })));
-        n.appendChild(el('span', '', wx(day.weather_code[i], 1).icon));
-        n.appendChild(document.createTextNode(Math.round(day.temperature_2m_max[i]) + '° / ' + Math.round(day.temperature_2m_min[i]) + '°'));
+      const long = day.time.map((iso, i) => {
+        const dt = new Date(iso + 'T12:00:00');
+        return { dt, name: i === 0 ? 'Today' : dt.toLocaleDateString([], { weekday: 'short' }), date: dt.toLocaleDateString([], { month: 'numeric', day: 'numeric' }),
+          icon: wx(day.weather_code[i], 1).icon, hi: Math.round(day.temperature_2m_max[i]), lo: Math.round(day.temperature_2m_min[i]), rain: day.precipitation_probability_max[i] };
+      });
+      $('#wxLongLbl').textContent = long.length + ' days';
+      long.forEach(x => {
+        const n = el('div', 'wxDay'); n.appendChild(el('b', '', x.name)); n.appendChild(el('small', '', x.date));
+        n.appendChild(el('span', '', x.icon));
+        const t2 = el('div', ''); t2.appendChild(el('em', '', x.hi + '°')); t2.appendChild(document.createTextNode(' ' + x.lo + '°')); n.appendChild(t2);
+        if (x.rain >= 30) n.appendChild(el('i', '', x.rain + '%'));
         days.appendChild(n);
-      }
-      $('#weather').classList.add('ready');
+      });
+      wxSummary = now.label + ', ' + Math.round(c.temperature_2m) + '° now in ' + p.name + ' (' + extra + '). Today: ' + line +
+        '. Sunrise ' + localTime(day.sunrise[0]) + ', sunset ' + localTime(day.sunset[0]) + '. Moon: ' + moon.name + ', ' + Math.round(moon.lit * 100) + '% lit' +
+        (next.length ? '. Next hours: ' + next.map(h => h.label + ' ' + h.temp + '°' + (h.rain != null ? ' ' + h.rain + '% rain' : '')).join(', ') : '') +
+        '. Next ' + long.length + ' days: ' + long.map(x => x.dt.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }) + ' ' + wx(day.weather_code[long.indexOf(x)], 1).label.toLowerCase() + ' ' + x.hi + '°/' + x.lo + '°' + (x.rain != null ? ' ' + x.rain + '% rain' : '')).join('; ');
+      $('#weather').classList.add('ready'); try{ placeSide(); }catch(err){}
     }catch(e){ /* keep what was showing */ }
   }
   async function findCity(name){
@@ -828,13 +925,13 @@
   const WX_MODES = ['all', 'noDays', 'nowOnly'];
   function wxMode(m){
     const w = $('#weather'); WX_MODES.forEach(x => w.classList.toggle(x, x === m && x !== 'all'));
-    cfg.wxMode = m; store.set('wxMode', m);
+    cfg.wxMode = m; store.set('wxMode', m); try{ placeSide(); }catch(e){}
   }
   wxMode(WX_MODES.includes(store.get('wxMode', 'all')) ? store.get('wxMode', 'all') : 'all');
   const nextWxMode = () => wxMode(WX_MODES[(WX_MODES.indexOf(cfg.wxMode) + 1) % WX_MODES.length]);
   $('#weather').addEventListener('click', nextWxMode);
   $('#weather').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); e.stopPropagation(); nextWxMode(); } });
-  loadWeather(); setInterval(loadWeather, 15 * 60 * 1000);
+  loadWeather(); setInterval(loadWeather, 15 * 60 * 1000); setInterval(() => { if (cfg.place) renderMoon(); }, 60 * 60 * 1000);
 
   /* ================= news (Google News RSS) ================= */
   let news = [], newsAt = 0, newsPage = 0, newsBusy = false;
@@ -898,7 +995,8 @@
   setInterval(() => { if (newsWanted() && news.length > perPage()){ newsPage++; renderNews(); } }, 25 * 1000);
 
   /* ================= calendar (secret iCal address) ================= */
-  let events = [], calState = '';
+  let events = [], calState = '', calText = '', calDay = '';
+  function calExpand(){ const [from, to] = calWindow(); events = eventsFromIcs(calText, from, to); calDay = new Date().toDateString(); }
   // The browser refuses the script unless its bytes match this hash, so a changed copy on a CDN cannot run here and read the API key.
   const ICAL_SRI = 'sha512-0izBc1upGYnrS1u1MX7QR+sjFIxZWxLVdNI7cUoHHCutDr5ENjuQRZuS+v+3NFNGfwHSrPoHzBzED0rV651tGw==';
   function loadScript(src, integrity){
@@ -950,45 +1048,99 @@
     });
     return out.sort((a, b) => a.start - b.start || (b.allDay - a.allDay));
   }
+  // Events are expanded for the whole month grid and at least the next 8 days, so every view can be drawn
+  // without fetching again; Claude is given the next 7 days.
+  function monthGrid(){
+    const first = new Date(); first.setHours(0, 0, 0, 0); first.setDate(1);
+    const start = new Date(first); start.setDate(1 - first.getDay());
+    const last = new Date(first.getFullYear(), first.getMonth() + 1, 0);
+    const end = new Date(last); end.setDate(last.getDate() + (6 - last.getDay()) + 1);
+    return { first, start, end };
+  }
   function calWindow(){
-    const from = new Date(); from.setHours(0, 0, 0, 0);
-    const to = new Date(from); to.setDate(to.getDate() + 2);
-    return [from, to];
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const week = new Date(today); week.setDate(week.getDate() + 8);
+    const g = monthGrid();
+    return [g.start < today ? g.start : today, g.end > week ? g.end : week];
   }
   async function loadCalendar(){
     if (!cfg.ical){ events = []; calState = ''; renderCalendar(); return; }
     try{
       await needIcal();
       const text = await relayText(cfg.ical, t => t.includes('BEGIN:VCALENDAR'), true);
-      const [from, to] = calWindow();
-      events = eventsFromIcs(text, from, to); calState = 'ok';
+      calText = text; calExpand(); calState = 'ok';
     }catch(e){ if (calState !== 'ok') calState = 'error'; }
     renderCalendar();
   }
+  function setCalView(v){ cfg.calView = v; store.set('calView', v); renderCalendar(); }
+  $('#calSeg').addEventListener('click', e => { const b = e.target.closest('button[data-v]'); if (b) setCalView(b.dataset.v); });
   function renderCalendar(){
     const card = $('#cal'), ul = $('#calList'); ul.textContent = '';
     card.classList.toggle('show', !!cfg.ical && !cfg.calHidden);
     $('#bCal').setAttribute('aria-pressed', String(!!cfg.ical && !cfg.calHidden));
+    $('#calSeg').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === cfg.calView)));
+    $('#calGrid') && $('#calGrid').remove();
     if (!cfg.ical) return;
     if (calState === 'error'){ $('#calSub').textContent = 'Could not read your calendar. Check the address in Settings.'; return; }
-    const now = new Date(), midnight = new Date(now); midnight.setHours(24, 0, 0, 0);
-    const upcoming = events.filter(e => e.end > now || (e.allDay && e.end > now));
-    const today = upcoming.filter(e => e.start < midnight), tomorrow = upcoming.filter(e => e.start >= midnight);
-    $('#calSub').textContent = now.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' });
-    let room = 5;
-    const row = e => {
+    if (calText && calDay !== new Date().toDateString()) calExpand();    // a new day (or month) began
+    const now = new Date(), today = new Date(now); today.setHours(0, 0, 0, 0);
+    const dayAfter = n => { const d = new Date(today); d.setDate(d.getDate() + n); return d; };
+    const upcoming = events.filter(e => e.end > now);
+    const row = (e, withDay) => {
       const li = document.createElement('li');
       if (!e.allDay && e.start <= now && e.end > now) li.className = 'now';
-      li.appendChild(el('span', 'when', e.allDay ? 'All day' : fmtTime(e.start)));
-      li.appendChild(el('span', 'what', e.title));
-      ul.appendChild(li); room--;
+      const when = el('span', 'when');
+      if (withDay) when.appendChild(el('span', 'wd', e.start.toLocaleDateString([], { month: 'numeric', day: 'numeric' })));
+      when.appendChild(document.createTextNode(e.allDay ? 'All day' : fmtTime(e.start)));
+      li.appendChild(when); li.appendChild(el('span', 'what', e.title));
+      ul.appendChild(li);
     };
-    if (!today.length) ul.appendChild(el('li', 'day', 'Nothing else today'));
-    today.slice(0, room).forEach(row);
-    if (today.length > 5) ul.appendChild(el('li', 'day', '+' + (today.length - 5) + ' more today'));
+    const dayName = d => +d === +today ? 'Today' : +d === +dayAfter(1) ? 'Tomorrow' : d.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' });
+
+    if (cfg.calView === 'week'){
+      const end = dayAfter(7);
+      $('#calSub').textContent = today.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' – ' + dayAfter(6).toLocaleDateString([], { month: 'short', day: 'numeric' });
+      let room = 12, shown = 0;
+      for (let i = 0; i < 7 && room > 0; i++){
+        const a = dayAfter(i), b = dayAfter(i + 1), list = upcoming.filter(e => e.start < b && e.end > a && (e.start >= a || i === 0));
+        if (!list.length) continue;
+        ul.appendChild(el('li', 'day', dayName(a)));
+        list.slice(0, room).forEach(e => { row(e); room--; shown++; });
+      }
+      const total = upcoming.filter(e => e.start < end).length;
+      if (!total) ul.appendChild(el('li', 'day', 'Nothing in the next 7 days'));
+      else if (total > shown) ul.appendChild(el('li', 'day', '+' + (total - shown) + ' more this week'));
+      return;
+    }
+    if (cfg.calView === 'month'){
+      const g = monthGrid();
+      $('#calSub').textContent = g.first.toLocaleDateString([], { month: 'long', year: 'numeric' });
+      const grid = el('div', 'mgrid'); grid.id = 'calGrid';
+      ['S', 'M', 'T', 'W', 'T', 'F', 'S'].forEach(x => grid.appendChild(el('div', 'dow', x)));
+      for (const d = new Date(g.start); d < g.end; d.setDate(d.getDate() + 1)){
+        const next = new Date(d); next.setDate(next.getDate() + 1);
+        const n = events.filter(e => e.start < next && e.end > d && !(e.allDay && +e.end === +d)).length;
+        const cell = el('div', 'd' + (d.getMonth() !== g.first.getMonth() ? ' other' : '') + (+d === +today ? ' today' : d < today ? ' past' : ''), String(d.getDate()));
+        if (n){ const dots = el('span', 'dots'); for (let k = 0; k < Math.min(3, n); k++) dots.appendChild(document.createElement('i')); cell.appendChild(dots); }
+        cell.title = n ? n + (n === 1 ? ' event' : ' events') : '';
+        grid.appendChild(cell);
+      }
+      ul.parentNode.insertBefore(grid, ul);
+      ul.appendChild(el('li', 'day', upcoming.length ? 'Coming up' : 'Nothing coming up this month'));
+      upcoming.slice(0, 4).forEach(e => row(e, true));
+      return;
+    }
+    // Day: the rest of today, then tomorrow if there is room
+    const midnight = dayAfter(1), tomorrowEnd = dayAfter(2);
+    const todays = upcoming.filter(e => e.start < midnight), tomorrow = upcoming.filter(e => e.start >= midnight && e.start < tomorrowEnd);
+    $('#calSub').textContent = now.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' });
+    let room = 5;
+    if (!todays.length) ul.appendChild(el('li', 'day', 'Nothing else today'));
+    todays.slice(0, room).forEach(e => { row(e); room--; });
+    if (todays.length > 5) ul.appendChild(el('li', 'day', '+' + (todays.length - 5) + ' more today'));
     if (room > 0 && tomorrow.length){
       ul.appendChild(el('li', 'day', 'Tomorrow'));
-      tomorrow.slice(0, room).forEach(row);
+      tomorrow.slice(0, room).forEach(e => row(e));
     }
   }
   loadCalendar(); setInterval(loadCalendar, 15 * 60 * 1000); setInterval(renderCalendar, 60 * 1000);
@@ -1437,6 +1589,10 @@
     if (/^(hide|close)( my| the)? lists?$/.test(cmd)){ setListsHidden(true); return true; }
     if (/^(show|open)( me)?( the| my)? (music|player|music player)$/.test(cmd)){ if (musicOn()){ setMusicHidden(false); pill('Showing music', 1500); } else pill('Nothing is playing', 2000); return true; }
     if (/^(hide|close)( the| my)? (music|player|music player)$/.test(cmd)){ setMusicHidden(true); pill(musicOn() ? 'Music hidden; still playing' : 'Music card will stay hidden', 2000); return true; }
+    if ((m = cmd.match(/^(?:show|open)(?: me)?(?: my| the)?(?: calendar)? (?:for )?(?:the |this )?(day|today|week|month)(?: view)?$/)) || (m = cmd.match(/^calendar (day|week|month)(?: view)?$/))){
+      if (!cfg.ical){ pill('No calendar connected', 2000); return true; }
+      const v = m[1] === 'today' ? 'day' : m[1]; setCalHidden(false); setCalView(v); pill('Calendar: ' + v, 1500); return true;
+    }
     if (/^(show|open)( me)?( my| the)? calendar$/.test(cmd)){ pill('Showing calendar', 1500); setCalHidden(false); return true; }
     if (/^(hide|close)( my| the)? calendar$/.test(cmd)){ pill('Hiding calendar', 1500); setCalHidden(true); return true; }
     // slideshow + news
@@ -1532,9 +1688,10 @@
     lines.push('Now: ' + now.toLocaleString([], { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' }));
     if (wxSummary) lines.push('Weather: ' + wxSummary);
     if (cfg.ical){
-      const up = events.filter(e => e.end > now);
-      lines.push('Calendar, today and tomorrow (read-only):' + (up.length ? '' : ' nothing scheduled'));
-      up.slice(0, 20).forEach(e => lines.push('- ' + e.start.toLocaleDateString([], { weekday: 'short' }) + ' ' + (e.allDay ? 'all day' : fmtTime(e.start) + '–' + fmtTime(e.end)) + ': ' + e.title));
+      const weekEnd = new Date(now); weekEnd.setHours(0, 0, 0, 0); weekEnd.setDate(weekEnd.getDate() + 7);
+      const up = events.filter(e => e.end > now && e.start < weekEnd);
+      lines.push('Calendar, next 7 days (read-only):' + (up.length ? '' : ' nothing scheduled'));
+      up.slice(0, 40).forEach(e => lines.push('- ' + e.start.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }) + ' ' + (e.allDay ? 'all day' : fmtTime(e.start) + '–' + fmtTime(e.end)) + ': ' + e.title));
     } else lines.push('Calendar: not connected.');
     lines.push('Lists:' + (lists.length ? '' : ' none yet'));
     lists.forEach(l => lines.push('- ' + l.name + ': ' + l.items.map(i => i.t + (i.done ? ' (done)' : '')).join('; ')));
@@ -1754,16 +1911,31 @@
   // On phones, stack the lists and calendar under the timers and Claude box instead of overlapping them:
   // upright they end above the clock, sideways they fill the right-hand column.
   const portrait = matchMedia('(max-width:700px) and (orientation:portrait)'), landscape = matchMedia('(max-height:500px) and (orientation:landscape)');
+  // Keep the clock and weather from running into what is above them on shorter screens: hide the
+  // 16-day card first, then the hourly one. On an upright phone, leave room for lists and calendar.
+  function fitCorner(){
+    const c = $('#corner'), w = $('#weather');
+    w.classList.remove('fitDays', 'fitHours');
+    if (!w.classList.contains('ready')) return;
+    const limit = portrait.matches ? $('#leftTop').getBoundingClientRect().bottom + 190
+      : landscape.matches ? $('#bar').getBoundingClientRect().bottom + 8
+      : $('#leftTop').getBoundingClientRect().bottom + 12;
+    for (const cls of ['fitDays', 'fitHours']){
+      if (c.getBoundingClientRect().top >= limit) return;
+      w.classList.add(cls);
+    }
+  }
   function placeSide(){
     const s = $('#side');
-    if (portrait.matches || landscape.matches) $('#leftTop').style.top = '';
+    if (portrait.matches || landscape.matches){ $('#leftTop').style.top = ''; fitCorner(); }
     if (!portrait.matches && !landscape.matches){
       // Larger screens: cards start at the top right, a safe gap below the buttons (which may wrap to two rows).
       const bar = $('#bar').getBoundingClientRect(), lt = $('#leftTop');
       const top = bar.bottom + 22;
       s.style.top = top + 'px';
       // On narrower windows the buttons reach the left column: start it below them too.
-      lt.style.top = ''; if (bar.left < lt.getBoundingClientRect().right + 12) lt.style.top = (bar.bottom + 14) + 'px'; s.style.maxHeight = Math.max(0, window.innerHeight - top - window.innerHeight * 0.04) + 'px';
+      lt.style.top = ''; if (bar.left < lt.getBoundingClientRect().right + 12) lt.style.top = (bar.bottom + 14) + 'px';
+      fitCorner(); s.style.maxHeight = Math.max(0, window.innerHeight - top - window.innerHeight * 0.04) + 'px';
       return;
     }
     const top = $('#leftTop').getBoundingClientRect().bottom + 12;
@@ -1881,7 +2053,7 @@
   wake();
 
   // Hooks used for testing.
-  window.__hd = { run, heard, local, parseDuration, parseClock, extractAlbum, eventsFromIcs, state: () => ({ lists, clocks, events, photos: photos.length,
+  window.__hd = { moonPhase, calendarText: async text => { await needIcal(); calText = text; calExpand(); calState = 'ok'; renderCalendar(); }, run, heard, local, parseDuration, parseClock, extractAlbum, eventsFromIcs, state: () => ({ lists, clocks, events, photos: photos.length,
     music: { open: !!yt.frame, hidden: !!cfg.musicHidden, radio: radio.on, radioTitle: radio.title, radioSrc: radio.audio ? radio.audio.getAttribute('src') || '' : '', radioVolume: radio.audio ? radio.audio.volume : null, src: yt.frame ? yt.frame.src : '', title: yt.title, vol: yt.vol, ducked: yt.ducked, sent: yt.log.slice() } }) };
 })();
 </script>

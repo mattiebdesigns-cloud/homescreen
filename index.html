@@ -99,7 +99,7 @@
   #cInput::placeholder{color:var(--faint)}
 
   /* ---------- right column ---------- */
-  #side{position:fixed;right:3vw;top:calc(50% + 2.5vh);transform:translateY(-50%);width:min(420px,32vw);display:flex;flex-direction:column;gap:14px;
+  #side{position:fixed;right:3vw;top:calc(2.6vh + 62px);width:min(420px,32vw);display:flex;flex-direction:column;gap:14px;
     max-height:86vh;overflow:hidden}
   .card{display:none;background:var(--glass);border:1px solid var(--line);border-radius:20px;padding:18px 22px 14px;
     backdrop-filter:blur(26px) saturate(1.3);-webkit-backdrop-filter:blur(26px) saturate(1.3)}
@@ -1741,12 +1741,21 @@
   const portrait = matchMedia('(max-width:700px) and (orientation:portrait)'), landscape = matchMedia('(max-height:500px) and (orientation:landscape)');
   function placeSide(){
     const s = $('#side');
-    if (!portrait.matches && !landscape.matches){ s.style.top = ''; s.style.maxHeight = ''; return; }
+    if (portrait.matches || landscape.matches) $('#leftTop').style.top = '';
+    if (!portrait.matches && !landscape.matches){
+      // Larger screens: cards start at the top right, a safe gap below the buttons (which may wrap to two rows).
+      const bar = $('#bar').getBoundingClientRect(), lt = $('#leftTop');
+      const top = bar.bottom + 22;
+      s.style.top = top + 'px';
+      // On narrower windows the buttons reach the left column: start it below them too.
+      lt.style.top = ''; if (bar.left < lt.getBoundingClientRect().right + 12) lt.style.top = (bar.bottom + 14) + 'px'; s.style.maxHeight = Math.max(0, window.innerHeight - top - window.innerHeight * 0.04) + 'px';
+      return;
+    }
     const top = $('#leftTop').getBoundingClientRect().bottom + 12;
     const bottom = portrait.matches ? $('#corner').getBoundingClientRect().top - 16 : window.innerHeight - 12;
     s.style.top = top + 'px'; s.style.maxHeight = Math.max(0, bottom - top) + 'px';
   }
-  if (window.ResizeObserver){ const ro = new ResizeObserver(placeSide); ro.observe($('#leftTop')); ro.observe($('#corner')); }
+  if (window.ResizeObserver){ const ro = new ResizeObserver(placeSide); ro.observe($('#leftTop')); ro.observe($('#corner')); ro.observe($('#bar')); }
   window.addEventListener('resize', placeSide);
   try{ portrait.addEventListener('change', placeSide); landscape.addEventListener('change', placeSide); }catch(e){}
   placeSide();

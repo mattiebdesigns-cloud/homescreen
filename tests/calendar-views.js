@@ -28,6 +28,12 @@ seg('month').click(); q('#calGrid .d[data-day="'+iso(dt(2))+'"], #calGrid .d[dat
 out.push((/Late call/.test(list()) && !/← Today/.test(list())?'PASS':'FAIL')+' the Day button also goes back to today');
 seg('week').click(); const head=[...document.querySelectorAll('#calList li.day[data-day]')].find(li=>li.dataset.day===iso(dt(5)));
 head.click(); out.push((/Dinner/.test(list()) && !/Dentist/.test(list()) && seg('day').getAttribute('aria-pressed')==='true'?'PASS':'FAIL')+' tapping a day heading in Week view opens that day');
+// squeeze the column, as on a phone: the card must stay inside it, keep its rounded corners and scroll
+seg('week'); seg('week').click(); q('#side').style.maxHeight='190px';
+const card=q('#cal'), cs=getComputedStyle(card), cr=card.getBoundingClientRect(), sr=q('#side').getBoundingClientRect();
+const before=card.scrollTop; card.scrollTop=1000;
+out.push((cr.bottom<=sr.bottom+1 && cs.overflowY==='auto' && parseFloat(cs.borderBottomLeftRadius)>0 && card.scrollHeight>card.clientHeight && card.scrollTop>before?'PASS':'FAIL')+' a long Week view scrolls inside its rounded card instead of being cut off ('+card.clientHeight+'px showing of '+card.scrollHeight+'px)');
+q('#side').style.maxHeight='';
 h.local('show my week'); out.push((cfg_v()==='week'?'PASS':'FAIL')+' voice: "show my week"');
 h.local('show today'); out.push((cfg_v()==='day' && !q('#calGrid')?'PASS':'FAIL')+' voice: "show today" (grid removed)');
 function cfg_v(){ return [...document.querySelectorAll('#calSeg button')].find(b=>b.getAttribute('aria-pressed')==='true').dataset.v; }

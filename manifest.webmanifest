@@ -1,6 +1,6 @@
 {
-  "name": "Home Display",
-  "short_name": "Home",
+  "name": "Hub",
+  "short_name": "Hub",
   "start_url": "/",
   "scope": "/",
   "display": "fullscreen",

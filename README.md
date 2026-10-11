@@ -1,4 +1,4 @@
-# Home Display
+# Hub
 
 An always-on smart display that runs in a browser tab. Put it full screen on a spare Mac, or add it to a docked phone's home screen, and it shows your photos, the time, weather, headlines, your calendar, lists and timers, with a Claude voice assistant on top.
 

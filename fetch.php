@@ -1,5 +1,5 @@
 <?php
-// Home Display helper: fetches a short list of Google pages for the display page
+// Hub helper: fetches a short list of Google pages for the display page
 // that sits next to it, so the page does not need public relay services.
 //
 // It only answers the page on its own site, only fetches the hosts listed below,

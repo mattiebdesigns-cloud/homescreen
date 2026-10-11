@@ -1,4 +1,4 @@
-<script>localStorage.clear(); localStorage.setItem('hd_seenGuide','true'); localStorage.setItem('hd_voice','false');
+<script>localStorage.clear(); localStorage.setItem('hd_seenGuide','true'); localStorage.setItem('hd_voice','false'); localStorage.setItem('hd_key', JSON.stringify('test-not-a-key'));
 localStorage.setItem('hd_place', JSON.stringify({name:'Philadelphia',lat:39.95,lon:-75.16}));
 localStorage.setItem('hd_ical', JSON.stringify('https://calendar.google.com/calendar/ical/x/basic.ics'));
 // A fake 16-day Open-Meteo answer, installed before the page asks for it.

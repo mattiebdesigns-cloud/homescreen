@@ -14,8 +14,14 @@ async function trySave(k){ document.querySelector('#bSet').click(); S.value=k; s
 let r=await trySave(' sk-ant-api03-ABC–def_123​\n');
 out.push((sent.at(-1)==='sk-ant-api03-ABC-def_123' && r==='ok'?'PASS':'FAIL')+' long dash + invisible chars cleaned -> sent "'+sent.at(-1)+'"');
 r=await trySave('sk-ant-api03-AB…CD');
-out.push((/cannot be part of a key/.test(r) && sent.length===1?'PASS':'FAIL')+' unfixable key gives a plain message: '+r.slice(0,50));
-out.push((/cannot be part of a key/.test(document.querySelector('#toast').textContent)?'PASS':'FAIL')+' warned on save');
+out.push((/shortened version/.test(r) && sent.length===1?'PASS':'FAIL')+' shortened key from the Console list is explained: '+r.slice(0,60));
+out.push((/Claude key: .*shortened/.test(document.querySelector('#toast').textContent)?'PASS':'FAIL')+' warned on save');
+r=await trySave('key: "sk-ant-api03-Quoted_456"');
+out.push((sent.at(-1)==='sk-ant-api03-Quoted_456' && r==='ok'?'PASS':'FAIL')+' label and quotes removed -> sent "'+sent.at(-1)+'"');
+r=await trySave('ｓｋ-ａｎｔ-api03-Wide789');
+out.push((sent.at(-1)==='sk-ant-api03-Wide789' && r==='ok'?'PASS':'FAIL')+' full-width letters fixed -> sent "'+sent.at(-1)+'"');
+r=await trySave('sk-ant-api03-Bad#Char');
+out.push((/"#" \(U\+0023\) at character 17 of 21/.test(r) && !/Bad|Char/.test(r)?'PASS':'FAIL')+' names the bad character and its position without showing the key: '+r.slice(0,80));
 const p=document.createElement('pre'); p.id='results'; p.textContent=out.join('\n'); document.body.appendChild(p);
 })();
 </script>

@@ -504,9 +504,22 @@
   // Copying a key on a phone can bring invisible characters along, or a keyboard can turn "-" into a long dash.
   // A real key is plain letters, digits, "-" and "_", and a browser cannot send anything else in a header.
   function cleanKey(s){
-    return String(s || '').replace(/[\u2010-\u2015\u2212\uFE58\uFE63\uFF0D]/g, '-').replace(/[\s\u00AD\u200B-\u200F\u2028-\u202F\u2060\uFEFF]/g, '');
+    return String(s || '').normalize('NFKC')                                   // full-width and look-alike characters
+      .replace(/[\u2010-\u2015\u2212\uFE58\uFE63\uFF0D]/g, '-')                   // long dashes back to "-"
+      .replace(/[\s\u00AD\u200B-\u200F\u2028-\u202F\u2060\uFEFF]/g, '')            // spaces and invisible characters
+      .replace(/^(?:x-api-key|api[_-]?key|key)[:=]/i, '')                        // a label copied along with it
+      .replace(/^[^A-Za-z0-9_-]+|[^A-Za-z0-9_-]+$/g, '');                        // quotes or brackets around it
   }
   const keyOk = k => /^[A-Za-z0-9_-]+$/.test(k);
+  // Says what is wrong with a key without showing the key.
+  function keyProblem(k, where){
+    const i = k.search(/[^A-Za-z0-9_-]/);
+    if (i < 0) return '';
+    const ch = k[i], code = 'U+' + ch.codePointAt(0).toString(16).toUpperCase().padStart(4, '0');
+    if (ch === '.' || ch === '\u2026') return 'The key has "…" in it at character ' + (i + 1) + ', so it is the shortened version shown in the key list. ' +
+      where + ' shows the full key only once, when it is created: make a new key and copy it from that screen.';
+    return 'The key has a character that cannot be part of a key: "' + ch + '" (' + code + ') at character ' + (i + 1) + ' of ' + k.length + '. Copy the key again from ' + where + ' and paste it.';
+  }
   const store = {
     get(k, d){ try{ const v = localStorage.getItem('hd_' + k); return v === null ? d : JSON.parse(v); }catch(e){ return d; } },
     set(k, v){ try{ localStorage.setItem('hd_' + k, JSON.stringify(v)); }catch(e){} }
@@ -1505,7 +1518,7 @@
   }
   async function askClaude(text){
     const key = cleanKey(cfg.key);
-    if (!keyOk(key)){ bubble(text, 'The API key in Settings has a character that cannot be part of a key, often from copying it on a phone. Open Settings and paste the key again.'); return; }
+    if (!keyOk(key)){ bubble(text, keyProblem(key, 'the Claude Console') + ' (Settings → Claude)'); return; }
     if (asking) asking.abort();
     const ctl = asking = new AbortController();
     stopSpeaking();
@@ -1714,7 +1727,7 @@
   $('#sYtTest').addEventListener('click', () => {
     const k = cleanKey($('#sYtKey').value);
     if (!k){ toast('Paste your YouTube Data API key above first.', 6000); return; }
-    if (!keyOk(k)){ toast('That YouTube key has a character that cannot be part of a key. Paste it again.', 8000); return; }
+    if (!keyOk(k)){ toast(keyProblem(k, 'Google Cloud'), 14000); return; }
     cfg.ytKey = k; store.set('ytKey', k); dlg.close(); playMusic('Khruangbin August 10');
   });
   $('#sSave').addEventListener('click', async () => {
@@ -1726,9 +1739,9 @@
     set('unit', $('#sUnit').value);
     set('status', $('#sStatus').value.trim()); set('radio', $('#sRadio').value.trim());
     set('ytKey', cleanKey($('#sYtKey').value));
-    if (cfg.ytKey && !keyOk(cfg.ytKey)) toast('That YouTube key has a character that cannot be part of a key. Copy it again from Google Cloud and paste it here.', 12000); loadStatus();
+    if (cfg.ytKey && !keyOk(cfg.ytKey)) toast('YouTube key: ' + keyProblem(cfg.ytKey, 'Google Cloud'), 16000); loadStatus();
     set('key', cleanKey($('#sKey').value));
-    if (cfg.key && !keyOk(cfg.key)) toast('That API key has a character that cannot be part of a key. Copy it again from the Claude Console and paste it here.', 12000); set('model', $('#sModel').value.trim() || 'claude-sonnet-5'); set('speak', $('#sSpeak').checked); set('ttsVoice', $('#sVoice').value);
+    if (cfg.key && !keyOk(cfg.key)) toast('Claude key: ' + keyProblem(cfg.key, 'the Claude Console'), 16000); set('model', $('#sModel').value.trim() || 'claude-sonnet-5'); set('speak', $('#sSpeak').checked); set('ttsVoice', $('#sVoice').value);
     const topic = $('#sTopic').value.trim();
     if (topic !== cfg.topic){ set('topic', topic); newsAt = 0; news = []; }
     if (cfg.newsMode !== 'auto') set('newsMode', 'auto');

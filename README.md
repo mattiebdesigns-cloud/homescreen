@@ -21,7 +21,7 @@ Live: [hub.cedarwater.net](https://hub.cedarwater.net) (it opens with a setup gu
 - **Lists, timers and alarms** handled on the page itself by voice or typing: "add oat milk to my shopping list", "set a pasta timer for 8 minutes", "wake me up at half past 6".
 - **Claude assistant** for anything else. It sees what is on the display (weather, calendar, lists, timers, an optional project status file) and can act on it through tools: add to or update lists, set timers and alarms, play music. Replies are spoken with the most natural voice installed on the device.
 - **Voice** with a wake word ("hey Claude") through Chrome's speech recognition, tolerant of the usual mishearings ("hey cloud", "hey clyde").
-- **Music**: "put on some jams" opens a radio page; "play Khruangbin" opens a YouTube Music search.
+- **Music player** on the screen: "play Khruangbin" searches YouTube (Data API, embeddable music only), plays the top result and queues the rest. Pause, next, volume and stop by voice, by button or through Claude; the music ducks while Claude talks or an alarm rings. The player is driven with postMessage, so no YouTube script runs in the page. Without a YouTube key, songs open in a YouTube Music window. "Put on some jams" opens a radio page.
 - **Phone friendly**: upright and sideways layouts, installable to the home screen, keeps the screen awake where the browser allows.
 
 ## How it works
@@ -29,6 +29,8 @@ Live: [hub.cedarwater.net](https://hub.cedarwater.net) (it opens with a setup gu
 ```
 browser ──► index.html ──────────────► api.anthropic.com      (Claude, with the user's own key)
                │   ├──────────────────► api.open-meteo.com     (weather, city lookup)
+               │   ├──────────────────► googleapis.com/youtube  (song search, user's own key)
+               │   ├──────────────────► youtube.com/embed       (player iframe, controlled by postMessage)
                │   └──────────────────► cdnjs (ical.js, pinned by SRI hash)
                └─► fetch.php ─────────► photos.google.com, news.google.com, calendar.google.com
 ```
@@ -67,7 +69,7 @@ browser ──► index.html ──────────────► api.a
 tests/run.sh
 ```
 
-Runs 61 checks in headless Google Chrome against the real `index.html`: duration and clock-time parsing, local commands, wake-word matching, album and iCal parsing, ringing several timers at once, the Claude tool loop (with the API faked), the photo screen, API-key cleaning and the calendar toggle. No accounts or keys are needed. The page exposes `window.__hd` (`run`, `heard`, `local`, `parseDuration`, `parseClock`, `extractAlbum`, `eventsFromIcs`, `state`) for driving it without a microphone.
+Runs 76 checks in headless Google Chrome against the real `index.html`: duration and clock-time parsing, local commands, wake-word matching, album and iCal parsing, ringing several timers at once, the Claude tool loop (with the API faked), the photo screen, API-key cleaning, the calendar toggle and the music player. No accounts or keys are needed. The page exposes `window.__hd` (`run`, `heard`, `local`, `parseDuration`, `parseClock`, `extractAlbum`, `eventsFromIcs`, `state`) for driving it without a microphone.
 
 ## History
 
